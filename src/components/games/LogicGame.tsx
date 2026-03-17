@@ -1,0 +1,163 @@
+import { useState, useEffect } from 'react'
+
+interface Props {
+  difficulty: number
+  onComplete: (score: number) => void
+}
+
+interface Question {
+  sequence: number[]
+  answer: number
+  options: number[]
+}
+
+function generateQuestion(difficulty: number): Question {
+  const type = Math.floor(Math.random() * 3)
+  let sequence: number[]
+  let answer: number
+
+  const base = Math.floor(Math.random() * (difficulty * 2)) + 1
+
+  if (type === 0) {
+    // Arithmetic: +n sequence
+    const step = Math.floor(Math.random() * (difficulty + 1)) + 1
+    const start = Math.floor(Math.random() * 10) + 1
+    const len = difficulty >= 6 ? 5 : 4
+    sequence = Array.from({ length: len }, (_, i) => start + i * step)
+    answer = start + len * step
+  } else if (type === 1) {
+    // Geometric: *n sequence (only for higher difficulties)
+    if (difficulty >= 4) {
+      const ratio = Math.floor(Math.random() * 2) + 2
+      sequence = [base, base * ratio, base * ratio ** 2, base * ratio ** 3]
+      answer = base * ratio ** 4
+    } else {
+      const step = (Math.floor(Math.random() * 3) + 1) * (difficulty >= 3 ? 2 : 1)
+      sequence = [1, 1 + step, 1 + step * 2, 1 + step * 3]
+      answer = 1 + step * 4
+    }
+  } else {
+    // Fibonacci-style: a, b, a+b, ...
+    const a = Math.floor(Math.random() * 5) + 1
+    const b = Math.floor(Math.random() * 5) + a
+    sequence = [a, b, a + b, a + b + b]
+    answer = a + b + b + (a + b)
+  }
+
+  // Generate plausible wrong options
+  const wrongSet = new Set<number>()
+  while (wrongSet.size < 3) {
+    const offset = Math.floor(Math.random() * 8) - 4
+    const wrong = answer + offset
+    if (wrong !== answer && wrong > 0) wrongSet.add(wrong)
+  }
+
+  const options = [answer, ...Array.from(wrongSet)].sort(() => Math.random() - 0.5)
+
+  return { sequence, answer, options }
+}
+
+const TOTAL = 8
+const TIME_PER_Q = 10 // seconds
+
+export default function LogicGame({ difficulty, onComplete }: Props) {
+  const [questions] = useState<Question[]>(() =>
+    Array.from({ length: TOTAL }, () => generateQuestion(difficulty))
+  )
+  const [current, setCurrent] = useState(0)
+  const [correct, setCorrect] = useState(0)
+  const [selected, setSelected] = useState<number | null>(null)
+  const [timeLeft, setTimeLeft] = useState(TIME_PER_Q)
+  const [done, setDone] = useState(false)
+
+  const q = questions[current]
+
+  useEffect(() => {
+    if (done || selected !== null) return
+    if (timeLeft <= 0) {
+      advance(false)
+      return
+    }
+    const t = setTimeout(() => setTimeLeft(s => s - 1), 1000)
+    return () => clearTimeout(t)
+  }, [timeLeft, done, selected])
+
+  function advance(wasCorrect: boolean) {
+    if (wasCorrect) setCorrect(c => c + 1)
+    if (current + 1 >= TOTAL) {
+      setDone(true)
+      const score = Math.round(((wasCorrect ? correct + 1 : correct) / TOTAL) * 100)
+      setTimeout(() => onComplete(score), 600)
+    } else {
+      setTimeout(() => {
+        setCurrent(c => c + 1)
+        setSelected(null)
+        setTimeLeft(TIME_PER_Q)
+      }, 600)
+    }
+  }
+
+  function handleAnswer(opt: number) {
+    if (selected !== null || done) return
+    setSelected(opt)
+    advance(opt === q.answer)
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-6 w-full max-w-sm mx-auto">
+      <div className="flex items-center justify-between w-full">
+        <span className="text-white/50 text-sm">Question {current + 1}/{TOTAL}</span>
+        <div className="flex items-center gap-2">
+          <div
+            className="h-1.5 rounded-full bg-indigo-500 transition-all"
+            style={{ width: `${(timeLeft / TIME_PER_Q) * 80}px` }}
+          />
+          <span className="text-white/50 text-sm w-6">{timeLeft}s</span>
+        </div>
+      </div>
+
+      <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
+        <p className="text-white/50 text-sm mb-3">What comes next?</p>
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          {q.sequence.map((n, i) => (
+            <span key={i} className="text-white text-2xl font-bold">{n}</span>
+          ))}
+          <span className="text-white/40 text-2xl font-bold">,</span>
+          <span className="text-indigo-400 text-2xl font-bold border-b-2 border-indigo-400 px-3">?</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 w-full">
+        {q.options.map((opt, i) => {
+          let bg = 'bg-white/5 hover:bg-white/10 border-white/10'
+          if (selected !== null) {
+            if (opt === q.answer) bg = 'bg-emerald-500/20 border-emerald-400'
+            else if (opt === selected && opt !== q.answer) bg = 'bg-red-500/20 border-red-400'
+            else bg = 'bg-white/5 border-white/10'
+          }
+          return (
+            <button
+              key={i}
+              onClick={() => handleAnswer(opt)}
+              disabled={selected !== null}
+              className={`py-4 rounded-xl text-white text-xl font-bold border transition-colors ${bg}`}
+            >
+              {opt}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="flex gap-1">
+        {questions.map((_, i) => (
+          <div
+            key={i}
+            className={`h-1.5 w-6 rounded-full transition-colors ${
+              i < current ? 'bg-indigo-500' : i === current ? 'bg-indigo-300' : 'bg-white/10'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
