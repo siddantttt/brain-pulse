@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import Landing from './pages/Landing'
+import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
 import Home from './pages/Home'
 import Session from './pages/Session'
@@ -9,14 +11,7 @@ import Progress from './pages/Progress'
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   if (loading) return <Loading />
-  if (!user) return <Navigate to="/onboarding" replace />
-  return <>{children}</>
-}
-
-function PublicGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
-  if (loading) return <Loading />
-  if (user) return <Navigate to="/home" replace />
+  if (!user) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
@@ -32,24 +27,27 @@ function Loading() {
 }
 
 function AppRoutes() {
+  const { user, loading } = useAuth()
+
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/home" replace />} />
+      {/* Landing — always public */}
+      <Route path="/" element={<Landing />} />
+
+      {/* Auth routes — redirect to /home if already logged in */}
+      <Route path="/login" element={
+        loading ? <Loading /> : user ? <Navigate to="/home" replace /> : <Login />
+      } />
       <Route path="/onboarding" element={
-        <PublicGuard><Onboarding /></PublicGuard>
+        loading ? <Loading /> : user ? <Navigate to="/home" replace /> : <Onboarding />
       } />
-      <Route path="/home" element={
-        <AuthGuard><Home /></AuthGuard>
-      } />
-      <Route path="/session" element={
-        <AuthGuard><Session /></AuthGuard>
-      } />
-      <Route path="/session-complete" element={
-        <AuthGuard><SessionComplete /></AuthGuard>
-      } />
-      <Route path="/progress" element={
-        <AuthGuard><Progress /></AuthGuard>
-      } />
+
+      {/* Protected routes */}
+      <Route path="/home" element={<AuthGuard><Home /></AuthGuard>} />
+      <Route path="/session" element={<AuthGuard><Session /></AuthGuard>} />
+      <Route path="/session-complete" element={<AuthGuard><SessionComplete /></AuthGuard>} />
+      <Route path="/progress" element={<AuthGuard><Progress /></AuthGuard>} />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
