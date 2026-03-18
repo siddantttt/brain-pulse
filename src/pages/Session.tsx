@@ -4,6 +4,8 @@ import { useGameSessions } from '../hooks/useGameSessions'
 import MemoryGame from '../components/games/MemoryGame'
 import FocusGame from '../components/games/FocusGame'
 import LogicGame from '../components/games/LogicGame'
+import VisualGame from '../components/games/VisualGame'
+import MathGame from '../components/games/MathGame'
 import ScoreScreen from '../components/ScoreScreen'
 import type { Domain } from '../types'
 import { DOMAIN_LABELS } from '../types'
@@ -14,6 +16,14 @@ const DOMAIN_ICONS: Record<Domain, string> = {
   logic: '⚡',
   visual: '👁',
   math: '🔢',
+}
+
+const DOMAIN_SCIENCE: Record<Domain, string> = {
+  focus: 'Continuous Performance Test · inhibitory control',
+  memory: 'Paired-associate learning · episodic memory',
+  logic: "Raven's Progressive Matrices · fluid intelligence",
+  visual: 'Corsi Block Test · visuospatial working memory',
+  math: 'Numerical cognition · intraparietal sulcus training',
 }
 
 function GameComponent({
@@ -27,12 +37,10 @@ function GameComponent({
 }) {
   switch (domain) {
     case 'memory': return <MemoryGame difficulty={difficulty} onComplete={onComplete} />
-    case 'focus': return <FocusGame difficulty={difficulty} onComplete={onComplete} />
-    case 'logic':
-    case 'visual':
-    case 'math':
-    default:
-      return <LogicGame difficulty={difficulty} onComplete={onComplete} />
+    case 'focus':  return <FocusGame  difficulty={difficulty} onComplete={onComplete} />
+    case 'logic':  return <LogicGame  difficulty={difficulty} onComplete={onComplete} />
+    case 'visual': return <VisualGame difficulty={difficulty} onComplete={onComplete} />
+    case 'math':   return <MathGame   difficulty={difficulty} onComplete={onComplete} />
   }
 }
 
@@ -97,7 +105,8 @@ export default function Session() {
       {phase === 'playing' && (
         <div className="text-center mb-6">
           <span className="text-2xl">{DOMAIN_ICONS[domain]}</span>
-          <p className="text-white/50 text-sm mt-1">{DOMAIN_LABELS[domain]} · Level {difficulty}</p>
+          <p className="text-white font-medium mt-1">{DOMAIN_LABELS[domain]} · Level {difficulty}</p>
+          <p className="text-white/30 text-xs mt-0.5">{DOMAIN_SCIENCE[domain]}</p>
         </div>
       )}
 
