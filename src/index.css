@@ -4,8 +4,8 @@
 
 @layer base {
   body {
-    background-color: #07090f;
-    color: #f0f0f0;
+    background-color: #0A0F1E;
+    color: #F9FAFB;
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
     margin: 0;
     -webkit-font-smoothing: antialiased;
@@ -15,15 +15,15 @@
 }
 
 @layer utilities {
-  .card { background: #111111; border: 1px solid #1e1e1e; border-radius: 16px; }
+  .card { background: #111827; border: 1px solid #1F2937; border-radius: 16px; }
   .btn-primary {
-    background: #4f9eff; color: #03060f; font-weight: 600;
+    background: #1B4FD8; color: #ffffff; font-weight: 600;
     border-radius: 12px; transition: opacity 0.15s;
   }
   .btn-primary:hover { opacity: 0.88; }
   .btn-ghost {
-    background: #111111; border: 1px solid #1e1e1e; color: #f0f0f0;
+    background: #111827; border: 1px solid #1F2937; color: #F9FAFB;
     border-radius: 12px; transition: border-color 0.15s;
   }
-  .btn-ghost:hover { border-color: #333; }
+  .btn-ghost:hover { border-color: #374151; }
 }
