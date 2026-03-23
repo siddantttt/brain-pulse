@@ -8,7 +8,7 @@ import { PulseIcon, FocusIcon, MemoryIcon, LogicIcon, ArrowRightIcon } from '../
 import type { Domain } from '../types'
 import { DOMAIN_COLORS } from '../types'
 
-type Screen = 'goal' | 'game' | 'auth'
+type Screen = 'welcome' | 'age' | 'goal' | 'game' | 'auth'
 type TapState = 'waiting' | 'ready' | 'tapped' | 'early'
 
 const GOALS = [
@@ -24,6 +24,24 @@ const GAME_META: Record<Domain, { title: string; subtitle: string; science: stri
   visual:      { title: 'Spatial recall',      subtitle: '5 rounds',                 science: 'Corsi Block Test · visuospatial memory' },
   math:        { title: 'Speed math',          subtitle: '45 seconds',               science: 'Numerical cognition training' },
   flexibility: { title: 'Rule shift',          subtitle: '16 cards',                 science: 'Wisconsin Card Sorting Test · cognitive flexibility' },
+}
+
+function ageGroupLine(n: number): string {
+  if (n >= 13 && n <= 17) return "We'll keep things fast and fun"
+  if (n >= 18 && n <= 25) return "We'll push your limits"
+  if (n >= 26 && n <= 40) return "We'll fit into your busy life"
+  if (n >= 41 && n <= 60) return "We'll keep your mind sharp"
+  if (n > 60)             return "We'll celebrate every win"
+  return ''
+}
+
+function ageGroupKey(n: number): string {
+  if (n >= 13 && n <= 17) return 'teen'
+  if (n >= 18 && n <= 25) return 'young_adult'
+  if (n >= 26 && n <= 40) return 'adult'
+  if (n >= 41 && n <= 60) return 'midlife'
+  if (n > 60)             return 'senior'
+  return ''
 }
 
 const ROUNDS = 5
@@ -92,7 +110,6 @@ function ReactionTest({ onComplete, themeColor }: { onComplete: (score: number) 
 }
 
 function BaselineGame({ domain, onComplete, themeColor }: { domain: Domain; onComplete: (s: number) => void; themeColor: string }) {
-  // Wrap game onComplete to drop the metrics argument — onboarding only needs the score
   const wrap = (score: number, _metrics: unknown) => onComplete(score)
   switch (domain) {
     case 'focus':  return <ReactionTest onComplete={onComplete} themeColor={themeColor} />
@@ -111,18 +128,36 @@ export default function Onboarding() {
   const navigate = useNavigate()
   const { signIn, signUp, signInWithGoogle } = useAuth()
 
-  const [screen, setScreen] = useState<Screen>('goal')
+  const [screen, setScreen] = useState<Screen>('welcome')
   const [goal, setGoal] = useState<Domain | null>(null)
   const [gameScore, setGameScore] = useState<number | null>(null)
+  const [age, setAge] = useState('')
+  const [ageGroup, setAgeGroup] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(true)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // The accent color transitions as the user moves between cognitive modes
+  // Glow pulse animation state for welcome screen
+  const [glowPulse, setGlowPulse] = useState(false)
+  useEffect(() => {
+    if (screen !== 'welcome') return
+    const t = setTimeout(() => setGlowPulse(true), 100)
+    return () => clearTimeout(t)
+  }, [screen])
+
   const themeColor = goal ? DOMAIN_COLORS[goal].primary : '#1B4FD8'
   const themeLight = goal ? DOMAIN_COLORS[goal].light : '#93C5FD'
+
+  const ageNum = parseInt(age)
+  const ageValid = !isNaN(ageNum) && ageNum >= 10 && ageNum <= 100
+  const ageLine = ageValid ? ageGroupLine(ageNum) : ''
+
+  function handleAgeContinue() {
+    setAgeGroup(ageGroupKey(ageNum))
+    setScreen('goal')
+  }
 
   async function handleAuth(e: React.FormEvent) {
     e.preventDefault()
@@ -133,7 +168,13 @@ export default function Onboarding() {
       else await signIn(email, password)
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        await supabase.from('user_profiles').upsert({ id: user.id, goal: goal ?? 'memory', onboarding_done: true })
+        await supabase.from('user_profiles').upsert({
+          id: user.id,
+          goal: goal ?? 'memory',
+          onboarding_done: true,
+          age: ageValid ? ageNum : null,
+          age_group: ageGroup || null,
+        })
         if (gameScore !== null) {
           await supabase.from('game_sessions').insert({ user_id: user.id, domain: goal ?? 'focus', score: gameScore, difficulty: 2 })
         }
@@ -154,7 +195,125 @@ export default function Onboarding() {
 
   const gameMeta = GAME_META[goal ?? 'focus']
 
-  // Screen 1 — Goal selection (each option shows its cognitive color on hover)
+  // ── Screen: welcome ──────────────────────────────────────────────────────
+  if (screen === 'welcome') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6"
+        style={{
+          background: '#0A0F1E',
+          transition: 'background 1s ease',
+        }}>
+        {/* Animated radial glow */}
+        <div style={{
+          position: 'fixed', inset: 0, pointerEvents: 'none',
+          background: 'radial-gradient(ellipse 700px 400px at 50% 40%, rgba(27,79,216,0.13) 0%, transparent 70%)',
+          opacity: glowPulse ? 1 : 0,
+          transition: 'opacity 1.8s ease',
+        }} />
+        <div className="max-w-sm w-full text-center relative">
+          <div className="flex items-center justify-center gap-2 mb-14"
+            style={{ opacity: glowPulse ? 1 : 0, transition: 'opacity 0.8s ease 0.2s' }}>
+            <PulseIcon size={16} style={{ color: '#1B4FD8' }} />
+            <span className="font-semibold tracking-tight text-sm" style={{ color: '#6B7280' }}>BRAIN PULSE</span>
+          </div>
+          <h1 className="font-bold tracking-tight mb-5"
+            style={{
+              fontSize: 'clamp(28px, 6vw, 40px)',
+              lineHeight: 1.15,
+              color: '#F9FAFB',
+              opacity: glowPulse ? 1 : 0,
+              transform: glowPulse ? 'translateY(0)' : 'translateY(10px)',
+              transition: 'opacity 0.7s ease 0.4s, transform 0.7s ease 0.4s',
+            }}>
+            Your brain is unique.<br />
+            <span style={{ color: '#93C5FD' }}>Your plan should be too.</span>
+          </h1>
+          <p className="text-sm mb-12" style={{
+            color: '#4B5563',
+            opacity: glowPulse ? 1 : 0,
+            transition: 'opacity 0.7s ease 0.6s',
+          }}>
+            Five cognitive domains. Twelve minutes a day.<br />Scores tied to clinical neuroscience assessments.
+          </p>
+          <button onClick={() => setScreen('age')}
+            className="btn-primary px-10 py-3.5 flex items-center gap-2 mx-auto"
+            style={{
+              opacity: glowPulse ? 1 : 0,
+              transform: glowPulse ? 'translateY(0)' : 'translateY(6px)',
+              transition: 'opacity 0.6s ease 0.9s, transform 0.6s ease 0.9s',
+            }}>
+            Get Started <ArrowRightIcon size={15} />
+          </button>
+          <p className="text-xs mt-4" style={{
+            color: '#1F2937',
+            opacity: glowPulse ? 1 : 0,
+            transition: 'opacity 0.6s ease 1.1s',
+          }}>
+            No card required
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Screen: age ───────────────────────────────────────────────────────────
+  if (screen === 'age') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6"
+        style={{ background: '#0A0F1E' }}>
+        <div className="max-w-sm w-full">
+          <div className="flex items-center gap-2 mb-10">
+            <PulseIcon size={15} style={{ color: '#1B4FD8' }} />
+            <span className="font-semibold tracking-tight text-sm" style={{ color: '#6B7280' }}>BRAIN PULSE</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight mb-1">First, how old are you?</h1>
+          <p className="text-sm mb-8" style={{ color: '#6B7280' }}>
+            We tailor the experience to your stage of life.
+          </p>
+
+          {/* Large number input */}
+          <div className="mb-2">
+            <input
+              type="number"
+              inputMode="numeric"
+              placeholder="Enter your age"
+              value={age}
+              onChange={e => setAge(e.target.value)}
+              min={10} max={100}
+              autoFocus
+              style={{
+                ...inputStyle,
+                fontSize: 32,
+                fontWeight: 700,
+                padding: '16px 20px',
+                letterSpacing: '-0.5px',
+                textAlign: 'center',
+                MozAppearance: 'textfield',
+              }}
+            />
+          </div>
+
+          {/* Reactive line */}
+          <div className="mb-8" style={{ minHeight: 24 }}>
+            <p className="text-sm text-center transition-all duration-300"
+              style={{ color: ageValid ? '#93C5FD' : 'transparent' }}>
+              {ageLine || '‎'}
+            </p>
+          </div>
+
+          <button
+            onClick={handleAgeContinue}
+            disabled={!ageValid}
+            className="btn-primary w-full py-3.5"
+            style={{ opacity: ageValid ? 1 : 0.3, transition: 'opacity 0.2s ease' }}>
+            Continue
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Screen: goal ──────────────────────────────────────────────────────────
   if (screen === 'goal') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6">
@@ -197,7 +356,7 @@ export default function Onboarding() {
     )
   }
 
-  // Screen 2 — Baseline game (accent color = the domain being tested)
+  // ── Screen: game ──────────────────────────────────────────────────────────
   if (screen === 'game') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6"
@@ -206,7 +365,7 @@ export default function Onboarding() {
           {gameScore === null ? (
             <>
               <div className="text-center w-full">
-                <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#6B7280' }}>Step 2 of 3 · Baseline</p>
+                <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#6B7280' }}>Step 3 of 4 · Baseline</p>
                 <h2 className="text-xl font-bold tracking-tight">{gameMeta.title}</h2>
                 <p className="text-sm mt-1" style={{ color: '#9CA3AF' }}>{gameMeta.subtitle}</p>
                 <p className="text-xs mt-0.5" style={{ color: themeColor }}>{gameMeta.science}</p>
@@ -236,7 +395,7 @@ export default function Onboarding() {
     )
   }
 
-  // Screen 3 — Auth (returns to primary blue)
+  // ── Screen: auth ──────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
       <div className="max-w-sm w-full">
@@ -244,7 +403,7 @@ export default function Onboarding() {
           <PulseIcon size={15} style={{ color: '#1B4FD8' }} />
           <span className="font-semibold tracking-tight text-sm">Brain Pulse</span>
         </div>
-        <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#6B7280' }}>Step 3 of 3</p>
+        <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#6B7280' }}>Step 4 of 4</p>
         <h2 className="text-2xl font-bold tracking-tight mb-1">{isSignUp ? 'Create your account' : 'Welcome back'}</h2>
         <p className="text-sm mb-8" style={{ color: '#9CA3AF' }}>Your baseline score will be saved automatically.</p>
 
