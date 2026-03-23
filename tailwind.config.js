@@ -4,14 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        navy: {
-          900: '#0f0f1a',
-          800: '#16162a',
-          700: '#1e1e3a',
-        },
+        bg:       '#07090f',
+        surface:  '#111111',
+        'surface-2': '#181818',
+        border:   '#1e1e1e',
+        accent:   '#4f9eff',
+        'accent-dim': 'rgba(79,158,255,0.08)',
       },
     },
   },
   plugins: [],
 }
-

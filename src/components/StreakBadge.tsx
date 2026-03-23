@@ -1,22 +1,14 @@
-interface Props {
-  streak: number
-}
+import { PulseIcon } from './Icons'
 
-export default function StreakBadge({ streak }: Props) {
+export default function StreakBadge({ streak }: { streak: number }) {
   if (streak === 0) {
-    return (
-      <div className="flex items-center gap-2 text-white/50 text-sm">
-        <span>Start your streak today</span>
-      </div>
-    )
+    return <p className="text-sm" style={{ color: '#444' }}>Start your streak today</p>
   }
-
   return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-full">
-      <span className="text-xl">🔥</span>
-      <span className="text-orange-300 font-semibold">
-        {streak} day streak
-      </span>
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+      style={{ background: 'rgba(79,158,255,0.08)', border: '1px solid rgba(79,158,255,0.15)' }}>
+      <PulseIcon size={13} style={{ color: '#4f9eff' }} />
+      <span className="text-sm font-medium" style={{ color: '#4f9eff' }}>{streak} day streak</span>
     </div>
   )
 }

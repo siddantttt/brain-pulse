@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { PulseIcon, ChevronLeftIcon } from '../components/Icons'
 
 export default function Login() {
   const navigate = useNavigate()
   const { signIn, signInWithGoogle } = useAuth()
-
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -35,65 +35,53 @@ export default function Login() {
     }
   }
 
+  const inputStyle = {
+    background: '#111', border: '1px solid #1e1e1e', borderRadius: 12,
+    color: '#f0f0f0', padding: '12px 16px', width: '100%', outline: 'none',
+    fontSize: 15,
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      <div className="max-w-sm w-full">
+      <div className="w-full max-w-sm">
 
-        {/* Back */}
-        <button
-          onClick={() => navigate('/')}
-          className="text-white/30 hover:text-white/60 text-sm transition-colors mb-8 flex items-center gap-1"
-        >
-          ← Back
+        <button onClick={() => navigate('/')}
+          className="flex items-center gap-1.5 text-sm mb-10 transition-colors"
+          style={{ color: '#444' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#888')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#444')}>
+          <ChevronLeftIcon size={15} /> Back
         </button>
 
-        <div className="text-center mb-8">
-          <div className="text-3xl mb-2">🧠</div>
-          <h1 className="text-2xl font-bold text-white">Welcome back</h1>
-          <p className="text-white/40 text-sm mt-1">Sign in to continue your training</p>
+        <div className="flex items-center gap-2.5 mb-8">
+          <PulseIcon size={16} style={{ color: '#4f9eff' }} />
+          <span className="font-semibold tracking-tight">Brain Pulse</span>
         </div>
 
+        <h1 className="text-2xl font-bold tracking-tight mb-1">Welcome back</h1>
+        <p className="text-sm mb-8" style={{ color: '#555' }}>Sign in to continue your training</p>
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500 transition-colors"
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500 transition-colors"
-            required
-          />
+          <input type="email" placeholder="Email" value={email}
+            onChange={e => setEmail(e.target.value)} style={inputStyle} required />
+          <input type="password" placeholder="Password" value={password}
+            onChange={e => setPassword(e.target.value)} style={inputStyle} required />
 
-          {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+          {error && <p className="text-sm text-center" style={{ color: '#ff5555' }}>{error}</p>}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-xl font-semibold text-white transition-colors mt-1"
-          >
+          <button type="submit" disabled={loading} className="btn-primary py-3 mt-1 w-full">
             {loading ? '…' : 'Sign in'}
           </button>
         </form>
 
-        <div className="flex items-center gap-3 my-4">
-          <div className="flex-1 h-px bg-white/10" />
-          <span className="text-white/30 text-sm">or</span>
-          <div className="flex-1 h-px bg-white/10" />
+        <div className="flex items-center gap-3 my-5">
+          <div className="flex-1 h-px" style={{ background: '#1e1e1e' }} />
+          <span className="text-xs" style={{ color: '#333' }}>or</span>
+          <div className="flex-1 h-px" style={{ background: '#1e1e1e' }} />
         </div>
 
-        <button
-          onClick={handleGoogle}
-          disabled={loading}
-          className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium text-white transition-colors flex items-center justify-center gap-2"
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18">
+        <button onClick={handleGoogle} disabled={loading} className="btn-ghost py-3 w-full flex items-center justify-center gap-2.5 text-sm">
+          <svg width="16" height="16" viewBox="0 0 18 18">
             <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
             <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/>
             <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/>
@@ -102,13 +90,12 @@ export default function Login() {
           Continue with Google
         </button>
 
-        <p className="text-center text-white/30 text-sm mt-6">
-          New here?{' '}
-          <button onClick={() => navigate('/onboarding')} className="text-indigo-400 hover:text-indigo-300">
-            Create an account
+        <p className="text-center text-sm mt-6" style={{ color: '#444' }}>
+          No account?{' '}
+          <button onClick={() => navigate('/onboarding')} style={{ color: '#4f9eff' }}>
+            Get started free
           </button>
         </p>
-
       </div>
     </div>
   )
