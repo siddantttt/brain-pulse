@@ -7,6 +7,7 @@ import Onboarding from './pages/Onboarding'
 import Home from './pages/Home'
 import Session from './pages/Session'
 import SessionComplete from './pages/SessionComplete'
+import BrainProfile from './pages/BrainProfile'
 import Progress from './pages/Progress'
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -73,6 +74,7 @@ function AppRoutes() {
       <Route path="/home" element={<AuthGuard><Home /></AuthGuard>} />
       <Route path="/session" element={<AuthGuard><Session /></AuthGuard>} />
       <Route path="/session-complete" element={<AuthGuard><SessionComplete /></AuthGuard>} />
+      <Route path="/brain-profile" element={<AuthGuard><BrainProfile /></AuthGuard>} />
       <Route path="/progress" element={<AuthGuard><Progress /></AuthGuard>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

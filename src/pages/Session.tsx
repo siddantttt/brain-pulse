@@ -82,9 +82,15 @@ export default function Session() {
   async function handleGameComplete(score: number, _metrics: GameMetrics) {
     setCurrentScore(score)
     await saveSession(domain, score, difficulty)
-    setResults(prev => [...prev, { domain, score, difficulty }])
+    const newResults = [...results, { domain, score, difficulty }]
+    setResults(newResults)
 
-    if (isAssessment && gameIdx + 1 < plan.length) {
+    if (isAssessment) {
+      if (gameIdx + 1 >= plan.length) {
+        // Assessment complete — go straight to profile reveal (no score screen)
+        navigate('/brain-profile', { state: { results: newResults } })
+        return
+      }
       const msg = TRANSITION_MESSAGES[gameIdx]
       if (msg) {
         setTransitionMsg(msg)
