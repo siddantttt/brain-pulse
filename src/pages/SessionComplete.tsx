@@ -7,7 +7,7 @@ import StreakBadge from '../components/StreakBadge'
 import { supabase } from '../lib/supabase'
 import { TrendUpIcon } from '../components/Icons'
 import type { Domain } from '../types'
-import { DOMAIN_LABELS } from '../types'
+import { DOMAIN_LABELS, DOMAIN_COLORS } from '../types'
 
 const TIPS = [
   "Sleep in the next few hours consolidates today's memory gains.",
@@ -64,7 +64,7 @@ export default function SessionComplete() {
 
       {/* Header */}
       <div className="mb-8">
-        <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#444' }}>Session complete</p>
+        <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#4B5563' }}>Session complete</p>
         <StreakBadge streak={profile?.streak_days ?? 0} />
       </div>
 
@@ -73,27 +73,34 @@ export default function SessionComplete() {
         <BrainRadarChart scores={scores} size={220} />
       </div>
 
-      {/* Deltas */}
-      <div className="rounded-2xl overflow-hidden mb-4" style={{ border: '1px solid #1e1e1e' }}>
-        {deltas.map(({ domain, score, delta }, i) => (
-          <div key={domain} className="flex items-center justify-between px-4 py-3.5"
-            style={{ borderBottom: i < deltas.length - 1 ? '1px solid #1a1a1a' : 'none', background: '#111' }}>
-            <span className="text-sm">{DOMAIN_LABELS[domain]}</span>
-            <div className="flex items-center gap-3">
-              <span className="text-sm" style={{ color: '#444' }}>{Math.round(score)}</span>
-              <span className="text-sm font-medium w-12 text-right"
-                style={{ color: delta > 0 ? '#4f9eff' : delta < 0 ? '#ff5555' : '#444' }}>
-                {delta > 0 ? `+${delta}` : delta === 0 ? '—' : delta}
-              </span>
+      {/* Deltas — each row uses its domain color */}
+      <div className="rounded-2xl overflow-hidden mb-4" style={{ border: '1px solid #1F2937' }}>
+        {deltas.map(({ domain, score, delta }, i) => {
+          const dc = DOMAIN_COLORS[domain]
+          return (
+            <div key={domain} className="flex items-center justify-between px-4 py-3.5"
+              style={{
+                borderBottom: i < deltas.length - 1 ? '1px solid #1F2937' : 'none',
+                background: '#111827',
+                borderLeft: `2px solid ${dc.primary}`,
+              }}>
+              <span className="text-sm" style={{ color: dc.light }}>{DOMAIN_LABELS[domain]}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-sm" style={{ color: '#6B7280' }}>{Math.round(score)}</span>
+                <span className="text-sm font-medium w-12 text-right"
+                  style={{ color: delta > 0 ? '#86EFAC' : delta < 0 ? '#FCA5A5' : '#6B7280' }}>
+                  {delta > 0 ? `+${delta}` : delta === 0 ? '—' : delta}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
-      {/* Tip */}
-      <div className="rounded-2xl px-5 py-4 mb-6" style={{ background: '#111', border: '1px solid #1e1e1e' }}>
-        <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#4f9eff' }}>Neuroscience</p>
-        <p className="text-sm leading-relaxed" style={{ color: '#555' }}>{getTip()}</p>
+      {/* Neuroscience tip */}
+      <div className="rounded-2xl px-5 py-4 mb-6" style={{ background: '#111827', border: '1px solid #1F2937' }}>
+        <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#93C5FD' }}>Neuroscience</p>
+        <p className="text-sm leading-relaxed" style={{ color: '#6B7280' }}>{getTip()}</p>
       </div>
 
       {/* Actions */}
@@ -101,7 +108,7 @@ export default function SessionComplete() {
         className="btn-primary w-full py-3.5 flex items-center justify-center gap-2 mb-3">
         <TrendUpIcon size={15} /> See my progress
       </button>
-      <button onClick={() => navigate('/home')} className="btn-ghost w-full py-3.5 text-sm" style={{ color: '#555' }}>
+      <button onClick={() => navigate('/home')} className="btn-ghost w-full py-3.5 text-sm" style={{ color: '#9CA3AF' }}>
         Done for today
       </button>
     </div>

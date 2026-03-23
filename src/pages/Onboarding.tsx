@@ -6,14 +6,15 @@ import MemoryGame from '../components/games/MemoryGame'
 import LogicGame from '../components/games/LogicGame'
 import { PulseIcon, FocusIcon, MemoryIcon, LogicIcon, ArrowRightIcon } from '../components/Icons'
 import type { Domain } from '../types'
+import { DOMAIN_COLORS } from '../types'
 
 type Screen = 'goal' | 'game' | 'auth'
 type TapState = 'waiting' | 'ready' | 'tapped' | 'early'
 
 const GOALS = [
-  { domain: 'focus' as Domain,  Icon: FocusIcon,  label: 'Sharper Focus',     desc: 'Improve concentration & attention span' },
-  { domain: 'memory' as Domain, Icon: MemoryIcon, label: 'Better Memory',      desc: 'Retain more, recall faster' },
-  { domain: 'logic' as Domain,  Icon: LogicIcon,  label: 'Overall Sharpness',  desc: 'Boost all-round mental performance' },
+  { domain: 'focus' as Domain,  Icon: FocusIcon,  label: 'Sharper Focus',    desc: 'Improve concentration & attention span' },
+  { domain: 'memory' as Domain, Icon: MemoryIcon, label: 'Better Memory',     desc: 'Retain more, recall faster' },
+  { domain: 'logic' as Domain,  Icon: LogicIcon,  label: 'Overall Sharpness', desc: 'Boost all-round mental performance' },
 ]
 
 const GAME_META: Record<Domain, { title: string; subtitle: string; science: string }> = {
@@ -26,7 +27,7 @@ const GAME_META: Record<Domain, { title: string; subtitle: string; science: stri
 
 const ROUNDS = 5
 
-function ReactionTest({ onComplete }: { onComplete: (score: number) => void }) {
+function ReactionTest({ onComplete, themeColor }: { onComplete: (score: number) => void; themeColor: string }) {
   const [round, setRound] = useState(0)
   const [state, setState] = useState<TapState>('waiting')
   const [times, setTimes] = useState<number[]>([])
@@ -57,7 +58,7 @@ function ReactionTest({ onComplete }: { onComplete: (score: number) => void }) {
     }
   }
 
-  if (round >= ROUNDS) return <div className="text-sm text-center" style={{ color: '#444' }}>Calculating…</div>
+  if (round >= ROUNDS) return <div className="text-sm text-center" style={{ color: '#6B7280' }}>Calculating…</div>
 
   return (
     <div className="flex flex-col items-center gap-8">
@@ -65,42 +66,42 @@ function ReactionTest({ onComplete }: { onComplete: (score: number) => void }) {
         {Array.from({ length: ROUNDS }).map((_, i) => (
           <div key={i} className="w-8 rounded-full transition-all" style={{
             height: 2,
-            background: i < round ? '#4f9eff' : i === round ? 'rgba(79,158,255,0.4)' : '#1e1e1e'
+            background: i < round ? themeColor : i === round ? themeColor + '60' : '#1F2937'
           }} />
         ))}
       </div>
       <button onClick={handleTap}
         className="w-44 h-44 rounded-full flex flex-col items-center justify-center transition-all duration-150 select-none"
         style={{
-          background: state === 'ready' ? '#4f9eff' : state === 'tapped' ? 'rgba(79,158,255,0.15)' : state === 'early' ? 'rgba(255,85,85,0.1)' : '#111',
-          border: `2px solid ${state === 'ready' ? '#4f9eff' : state === 'tapped' ? 'rgba(79,158,255,0.3)' : state === 'early' ? 'rgba(255,85,85,0.3)' : '#1e1e1e'}`,
+          background: state === 'ready' ? themeColor : state === 'tapped' ? themeColor + '25' : state === 'early' ? 'rgba(220,38,38,0.1)' : '#111827',
+          border: `2px solid ${state === 'ready' ? themeColor : state === 'tapped' ? themeColor + '50' : state === 'early' ? 'rgba(220,38,38,0.3)' : '#1F2937'}`,
           transform: state === 'ready' ? 'scale(1.05)' : 'scale(1)',
-          boxShadow: state === 'ready' ? '0 0 40px rgba(79,158,255,0.25)' : 'none',
+          boxShadow: state === 'ready' ? `0 0 40px ${themeColor}40` : 'none',
         }}>
-        {state === 'waiting' && <span className="text-sm" style={{ color: '#444' }}>wait…</span>}
-        {state === 'ready' && <span className="text-base font-bold" style={{ color: '#03060f' }}>TAP</span>}
-        {state === 'tapped' && <><span className="text-xl font-bold" style={{ color: '#4f9eff' }}>{times[times.length - 1]}ms</span><span className="text-xs mt-1" style={{ color: '#555' }}>good</span></>}
-        {state === 'early' && <span className="text-sm" style={{ color: '#ff5555' }}>too early</span>}
+        {state === 'waiting' && <span className="text-sm" style={{ color: '#6B7280' }}>wait…</span>}
+        {state === 'ready' && <span className="text-base font-bold" style={{ color: '#ffffff' }}>TAP</span>}
+        {state === 'tapped' && <><span className="text-xl font-bold" style={{ color: themeColor }}>{times[times.length - 1]}ms</span><span className="text-xs mt-1" style={{ color: '#6B7280' }}>good</span></>}
+        {state === 'early' && <span className="text-sm" style={{ color: '#FCA5A5' }}>too early</span>}
       </button>
-      <p className="text-sm" style={{ color: '#444' }}>
+      <p className="text-sm" style={{ color: '#6B7280' }}>
         {state === 'waiting' ? 'Wait for the circle to light up' : 'Tap as fast as you can'}
       </p>
     </div>
   )
 }
 
-function BaselineGame({ domain, onComplete }: { domain: Domain; onComplete: (s: number) => void }) {
+function BaselineGame({ domain, onComplete, themeColor }: { domain: Domain; onComplete: (s: number) => void; themeColor: string }) {
   switch (domain) {
-    case 'focus':  return <ReactionTest onComplete={onComplete} />
+    case 'focus':  return <ReactionTest onComplete={onComplete} themeColor={themeColor} />
     case 'memory': return <MemoryGame difficulty={2} onComplete={onComplete} />
     case 'logic':  return <LogicGame difficulty={2} onComplete={onComplete} />
-    default:       return <ReactionTest onComplete={onComplete} />
+    default:       return <ReactionTest onComplete={onComplete} themeColor={themeColor} />
   }
 }
 
 const inputStyle = {
-  background: '#111', border: '1px solid #1e1e1e', borderRadius: 12,
-  color: '#f0f0f0', padding: '12px 16px', width: '100%', outline: 'none', fontSize: 15,
+  background: '#111827', border: '1px solid #1F2937', borderRadius: 12,
+  color: '#F9FAFB', padding: '12px 16px', width: '100%', outline: 'none', fontSize: 15,
 }
 
 export default function Onboarding() {
@@ -115,6 +116,10 @@ export default function Onboarding() {
   const [isSignUp, setIsSignUp] = useState(true)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // The accent color transitions as the user moves between cognitive modes
+  const themeColor = goal ? DOMAIN_COLORS[goal].primary : '#1B4FD8'
+  const themeLight = goal ? DOMAIN_COLORS[goal].light : '#93C5FD'
 
   async function handleAuth(e: React.FormEvent) {
     e.preventDefault()
@@ -146,67 +151,79 @@ export default function Onboarding() {
 
   const gameMeta = GAME_META[goal ?? 'focus']
 
-  // Screen 1 — Goal
+  // Screen 1 — Goal selection (each option shows its cognitive color on hover)
   if (screen === 'goal') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6">
         <div className="max-w-sm w-full">
           <div className="flex items-center gap-2 mb-10">
-            <PulseIcon size={15} style={{ color: '#4f9eff' }} />
+            <PulseIcon size={15} style={{ color: '#1B4FD8' }} />
             <span className="font-semibold tracking-tight text-sm">Brain Pulse</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight mb-1">What do you want to improve?</h1>
-          <p className="text-sm mb-8" style={{ color: '#555' }}>We'll build your session around this.</p>
+          <p className="text-sm mb-8" style={{ color: '#9CA3AF' }}>We'll build your session around this.</p>
           <div className="flex flex-col gap-2">
-            {GOALS.map(({ domain, Icon, label, desc }) => (
-              <button key={domain} onClick={() => { setGoal(domain); setScreen('game') }}
-                className="flex items-center gap-4 p-4 rounded-2xl text-left transition-all group"
-                style={{ background: '#111', border: '1px solid #1e1e1e' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(79,158,255,0.25)'; e.currentTarget.style.background = 'rgba(79,158,255,0.04)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e1e1e'; e.currentTarget.style.background = '#111' }}>
-                <div className="p-2.5 rounded-xl shrink-0" style={{ background: '#1a1a1a' }}>
-                  <Icon size={16} style={{ color: '#555' }} />
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium text-sm">{label}</div>
-                  <div className="text-xs mt-0.5" style={{ color: '#444' }}>{desc}</div>
-                </div>
-                <ArrowRightIcon size={14} style={{ color: '#333' }} />
-              </button>
-            ))}
+            {GOALS.map(({ domain, Icon, label, desc }) => {
+              const dc = DOMAIN_COLORS[domain]
+              return (
+                <button key={domain} onClick={() => { setGoal(domain); setScreen('game') }}
+                  className="flex items-center gap-4 p-4 rounded-2xl text-left transition-all"
+                  style={{ background: '#111827', border: '1px solid #1F2937' }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = dc.primary + '60'
+                    e.currentTarget.style.background = dc.primary + '0D'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = '#1F2937'
+                    e.currentTarget.style.background = '#111827'
+                  }}>
+                  <div className="p-2.5 rounded-xl shrink-0" style={{ background: '#1F2937' }}>
+                    <Icon size={16} style={{ color: dc.primary }} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{label}</div>
+                    <div className="text-xs mt-0.5" style={{ color: '#6B7280' }}>{desc}</div>
+                  </div>
+                  <ArrowRightIcon size={14} style={{ color: '#4B5563' }} />
+                </button>
+              )
+            })}
           </div>
         </div>
       </div>
     )
   }
 
-  // Screen 2 — Baseline game
+  // Screen 2 — Baseline game (accent color = the domain being tested)
   if (screen === 'game') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center p-6"
+        style={{ background: `radial-gradient(ellipse 800px 400px at 50% 0%, ${themeColor}0A 0%, transparent 60%), #0A0F1E` }}>
         <div className="max-w-sm w-full flex flex-col items-center gap-8">
           {gameScore === null ? (
             <>
               <div className="text-center w-full">
-                <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#444' }}>Step 2 of 3 · Baseline</p>
+                <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#6B7280' }}>Step 2 of 3 · Baseline</p>
                 <h2 className="text-xl font-bold tracking-tight">{gameMeta.title}</h2>
-                <p className="text-sm mt-1" style={{ color: '#555' }}>{gameMeta.subtitle}</p>
-                <p className="text-xs mt-0.5" style={{ color: '#333' }}>{gameMeta.science}</p>
+                <p className="text-sm mt-1" style={{ color: '#9CA3AF' }}>{gameMeta.subtitle}</p>
+                <p className="text-xs mt-0.5" style={{ color: themeColor }}>{gameMeta.science}</p>
               </div>
-              <BaselineGame domain={goal ?? 'focus'} onComplete={setGameScore} />
+              <BaselineGame domain={goal ?? 'focus'} onComplete={setGameScore} themeColor={themeColor} />
             </>
           ) : (
             <div className="flex flex-col items-center gap-6 text-center w-full">
               <div>
-                <p className="text-xs uppercase tracking-widest mb-3" style={{ color: '#444' }}>Your {goal} baseline</p>
-                <div className="text-7xl font-bold tracking-tight">{Math.round(gameScore)}</div>
-                <p className="text-sm mt-1" style={{ color: '#444' }}>out of 100</p>
+                <p className="text-xs uppercase tracking-widest mb-3" style={{ color: themeColor }}>Your {goal} baseline</p>
+                <div className="text-7xl font-bold tracking-tight" style={{ color: themeLight }}>{Math.round(gameScore)}</div>
+                <p className="text-sm mt-1" style={{ color: '#6B7280' }}>out of 100</p>
               </div>
-              <div className="w-full rounded-full overflow-hidden" style={{ height: 2, background: '#1e1e1e', maxWidth: 240 }}>
-                <div className="h-full rounded-full" style={{ width: `${gameScore}%`, background: '#4f9eff' }} />
+              <div className="w-full rounded-full overflow-hidden" style={{ height: 2, background: '#1F2937', maxWidth: 240 }}>
+                <div className="h-full rounded-full" style={{ width: `${gameScore}%`, background: themeColor }} />
               </div>
-              <p className="text-sm" style={{ color: '#555' }}>Create your account to save this and track your progress.</p>
-              <button onClick={() => setScreen('auth')} className="btn-primary w-full max-w-xs py-3.5 flex items-center justify-center gap-2">
+              <p className="text-sm" style={{ color: '#9CA3AF' }}>Create your account to save this and track your progress.</p>
+              <button onClick={() => setScreen('auth')}
+                className="w-full max-w-xs py-3.5 flex items-center justify-center gap-2 font-semibold rounded-xl transition-opacity hover:opacity-88"
+                style={{ background: themeColor, color: '#ffffff' }}>
                 Save my results <ArrowRightIcon size={15} />
               </button>
             </div>
@@ -216,31 +233,31 @@ export default function Onboarding() {
     )
   }
 
-  // Screen 3 — Auth
+  // Screen 3 — Auth (returns to primary blue)
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
       <div className="max-w-sm w-full">
         <div className="flex items-center gap-2 mb-8">
-          <PulseIcon size={15} style={{ color: '#4f9eff' }} />
+          <PulseIcon size={15} style={{ color: '#1B4FD8' }} />
           <span className="font-semibold tracking-tight text-sm">Brain Pulse</span>
         </div>
-        <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#444' }}>Step 3 of 3</p>
+        <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#6B7280' }}>Step 3 of 3</p>
         <h2 className="text-2xl font-bold tracking-tight mb-1">{isSignUp ? 'Create your account' : 'Welcome back'}</h2>
-        <p className="text-sm mb-8" style={{ color: '#555' }}>Your baseline score will be saved automatically.</p>
+        <p className="text-sm mb-8" style={{ color: '#9CA3AF' }}>Your baseline score will be saved automatically.</p>
 
         <form onSubmit={handleAuth} className="flex flex-col gap-3">
           <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} required />
           <input type="password" placeholder="Password (min 6 characters)" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} required minLength={6} />
-          {error && <p className="text-sm text-center" style={{ color: '#ff5555' }}>{error}</p>}
+          {error && <p className="text-sm text-center" style={{ color: '#FCA5A5' }}>{error}</p>}
           <button type="submit" disabled={loading} className="btn-primary py-3 w-full mt-1">
             {loading ? '…' : isSignUp ? 'Create account' : 'Sign in'}
           </button>
         </form>
 
         <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px" style={{ background: '#1e1e1e' }} />
-          <span className="text-xs" style={{ color: '#333' }}>or</span>
-          <div className="flex-1 h-px" style={{ background: '#1e1e1e' }} />
+          <div className="flex-1 h-px" style={{ background: '#1F2937' }} />
+          <span className="text-xs" style={{ color: '#4B5563' }}>or</span>
+          <div className="flex-1 h-px" style={{ background: '#1F2937' }} />
         </div>
 
         <button onClick={handleGoogle} disabled={loading} className="btn-ghost py-3 w-full flex items-center justify-center gap-2.5 text-sm">
@@ -253,9 +270,9 @@ export default function Onboarding() {
           Continue with Google
         </button>
 
-        <p className="text-center text-sm mt-6" style={{ color: '#444' }}>
+        <p className="text-center text-sm mt-6" style={{ color: '#6B7280' }}>
           {isSignUp ? 'Already have an account? ' : 'New here? '}
-          <button onClick={() => setIsSignUp(!isSignUp)} style={{ color: '#4f9eff' }}>
+          <button onClick={() => setIsSignUp(!isSignUp)} style={{ color: '#93C5FD' }}>
             {isSignUp ? 'Sign in' : 'Sign up'}
           </button>
         </p>

@@ -36,8 +36,8 @@ export default function Login() {
   }
 
   const inputStyle = {
-    background: '#111', border: '1px solid #1e1e1e', borderRadius: 12,
-    color: '#f0f0f0', padding: '12px 16px', width: '100%', outline: 'none',
+    background: '#111827', border: '1px solid #1F2937', borderRadius: 12,
+    color: '#F9FAFB', padding: '12px 16px', width: '100%', outline: 'none',
     fontSize: 15,
   }
 
@@ -47,19 +47,19 @@ export default function Login() {
 
         <button onClick={() => navigate('/')}
           className="flex items-center gap-1.5 text-sm mb-10 transition-colors"
-          style={{ color: '#444' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#888')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#444')}>
+          style={{ color: '#6B7280' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#9CA3AF')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#6B7280')}>
           <ChevronLeftIcon size={15} /> Back
         </button>
 
         <div className="flex items-center gap-2.5 mb-8">
-          <PulseIcon size={16} style={{ color: '#4f9eff' }} />
+          <PulseIcon size={16} style={{ color: '#1B4FD8' }} />
           <span className="font-semibold tracking-tight">Brain Pulse</span>
         </div>
 
         <h1 className="text-2xl font-bold tracking-tight mb-1">Welcome back</h1>
-        <p className="text-sm mb-8" style={{ color: '#555' }}>Sign in to continue your training</p>
+        <p className="text-sm mb-8" style={{ color: '#9CA3AF' }}>Sign in to continue your training</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <input type="email" placeholder="Email" value={email}
@@ -67,7 +67,7 @@ export default function Login() {
           <input type="password" placeholder="Password" value={password}
             onChange={e => setPassword(e.target.value)} style={inputStyle} required />
 
-          {error && <p className="text-sm text-center" style={{ color: '#ff5555' }}>{error}</p>}
+          {error && <p className="text-sm text-center" style={{ color: '#FCA5A5' }}>{error}</p>}
 
           <button type="submit" disabled={loading} className="btn-primary py-3 mt-1 w-full">
             {loading ? '…' : 'Sign in'}
@@ -75,9 +75,9 @@ export default function Login() {
         </form>
 
         <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px" style={{ background: '#1e1e1e' }} />
-          <span className="text-xs" style={{ color: '#333' }}>or</span>
-          <div className="flex-1 h-px" style={{ background: '#1e1e1e' }} />
+          <div className="flex-1 h-px" style={{ background: '#1F2937' }} />
+          <span className="text-xs" style={{ color: '#4B5563' }}>or</span>
+          <div className="flex-1 h-px" style={{ background: '#1F2937' }} />
         </div>
 
         <button onClick={handleGoogle} disabled={loading} className="btn-ghost py-3 w-full flex items-center justify-center gap-2.5 text-sm">
@@ -90,9 +90,9 @@ export default function Login() {
           Continue with Google
         </button>
 
-        <p className="text-center text-sm mt-6" style={{ color: '#444' }}>
+        <p className="text-center text-sm mt-6" style={{ color: '#6B7280' }}>
           No account?{' '}
-          <button onClick={() => navigate('/onboarding')} style={{ color: '#4f9eff' }}>
+          <button onClick={() => navigate('/onboarding')} style={{ color: '#93C5FD' }}>
             Get started free
           </button>
         </p>

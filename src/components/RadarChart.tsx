@@ -1,5 +1,6 @@
 import { RadarChart as RechartsRadar, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts'
 import type { DomainScores } from '../types'
+import { DOMAIN_COLORS } from '../types'
 
 export default function BrainRadarChart({ scores, size = 280 }: { scores: DomainScores; size?: number }) {
   const data = [
@@ -12,9 +13,10 @@ export default function BrainRadarChart({ scores, size = 280 }: { scores: Domain
   return (
     <ResponsiveContainer width={size} height={size}>
       <RechartsRadar data={data} outerRadius="70%">
-        <PolarGrid stroke="rgba(255,255,255,0.06)" />
-        <PolarAngleAxis dataKey="domain" tick={{ fill: '#444', fontSize: 11 }} />
-        <Radar dataKey="score" stroke="#4f9eff" fill="#4f9eff" fillOpacity={0.12} strokeWidth={1.5} />
+        <PolarGrid stroke="rgba(255,255,255,0.05)" />
+        <PolarAngleAxis dataKey="domain" tick={{ fill: '#4B5563', fontSize: 11 }} />
+        {/* Blue focus polygon — the "brain profile" lives in the focus domain's color space */}
+        <Radar dataKey="score" stroke={DOMAIN_COLORS.focus.primary} fill={DOMAIN_COLORS.focus.primary} fillOpacity={0.1} strokeWidth={1.5} />
       </RechartsRadar>
     </ResponsiveContainer>
   )

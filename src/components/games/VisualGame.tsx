@@ -1,9 +1,9 @@
 import { useState } from 'react'
 
 /**
- * Corsi Block Test (visuospatial working memory)
- * Shows a sequence of highlighted cells, user must reproduce the order.
- * Scientifically validated measure of visuospatial short-term memory span.
+ * Spatial Recall (Corsi Block Test) — Sky Blue domain (visuospatial attention)
+ * Lighter blue family — same cognitive category as focus but lighter to signal
+ * the shift from concentrated attention to spatial working memory.
  */
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
   onComplete: (score: number) => void
 }
 
-const GRID = 16 // 4x4
+const GRID = 16
 
 function getSequenceLength(difficulty: number) {
   return Math.min(2 + difficulty, 10)
@@ -71,7 +71,6 @@ export default function VisualGame({ difficulty, onComplete }: Props) {
     setUserInput(next)
 
     if (next.length === sequence.length) {
-      // Score this round: correct positions in order
       const correct = next.filter((v, i) => v === sequence[i]).length
       const roundScore = correct / sequence.length
       const newScores = [...scores, roundScore]
@@ -100,11 +99,21 @@ export default function VisualGame({ difficulty, onComplete }: Props) {
     return 'idle'
   }
 
+  const cellStyle = (s: ReturnType<typeof cellState>): React.CSSProperties => {
+    switch (s) {
+      case 'flash':    return { background: '#0284C7', borderColor: '#7DD3FC', boxShadow: '0 0 16px rgba(2,132,199,0.5)', transform: 'scale(1.1)' }
+      case 'selected': return { background: 'rgba(2,132,199,0.4)', borderColor: '#0284C7' }
+      case 'correct':  return { background: 'rgba(22,163,74,0.5)', borderColor: '#16A34A' }
+      case 'wrong':    return { background: 'rgba(220,38,38,0.4)', borderColor: '#DC2626' }
+      default:         return { background: 'rgba(255,255,255,0.04)', borderColor: '#1F2937' }
+    }
+  }
+
   return (
     <div className="flex flex-col items-center gap-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-white">Spatial Recall</h2>
-        <p className="text-white/50 text-sm mt-1">
+        <h2 className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>Spatial Recall</h2>
+        <p className="text-sm mt-1" style={{ color: '#9CA3AF' }}>
           {phase === 'intro' ? 'Watch the sequence, then tap the cells in order' :
            phase === 'showing' ? 'Memorise the sequence…' :
            phase === 'input' ? `Tap ${sequence.length - userInput.length} more cell${sequence.length - userInput.length !== 1 ? 's' : ''}` :
@@ -114,7 +123,8 @@ export default function VisualGame({ difficulty, onComplete }: Props) {
 
       <div className="flex gap-1.5">
         {Array.from({ length: ROUNDS }).map((_, i) => (
-          <div key={i} className={`w-8 h-1.5 rounded-full ${i < round ? 'bg-indigo-500' : i === round ? 'bg-indigo-300' : 'bg-white/10'}`} />
+          <div key={i} className="w-8 h-1.5 rounded-full"
+            style={{ background: i < round ? '#0284C7' : i === round ? '#7DD3FC' : '#1F2937' }} />
         ))}
       </div>
 
@@ -122,32 +132,21 @@ export default function VisualGame({ difficulty, onComplete }: Props) {
         {Array.from({ length: GRID }).map((_, idx) => {
           const s = cellState(idx)
           return (
-            <button
-              key={idx}
-              onClick={() => handleCellClick(idx)}
-              disabled={phase !== 'input'}
-              className={`w-14 h-14 rounded-xl transition-all duration-150 border
-                ${s === 'flash' ? 'bg-indigo-400 border-indigo-300 scale-110 shadow-lg shadow-indigo-500/50' :
-                  s === 'selected' ? 'bg-indigo-600/60 border-indigo-400' :
-                  s === 'correct' ? 'bg-emerald-500 border-emerald-300' :
-                  s === 'wrong' ? 'bg-red-500/60 border-red-400' :
-                  'bg-white/5 border-white/10 hover:bg-white/10'}
-              `}
+            <button key={idx} onClick={() => handleCellClick(idx)} disabled={phase !== 'input'}
+              className="w-14 h-14 rounded-xl transition-all duration-150 border"
+              style={cellStyle(s)}
             />
           )
         })}
       </div>
 
       {phase === 'intro' && (
-        <button
-          onClick={startRound}
-          className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-semibold text-white transition-colors"
-        >
+        <button onClick={startRound} className="btn-primary px-8 py-3">
           Start
         </button>
       )}
 
-      <p className="text-white/20 text-xs text-center max-w-xs">
+      <p className="text-xs text-center max-w-xs" style={{ color: '#374151' }}>
         Based on the Corsi Block Test · measures visuospatial working memory
       </p>
     </div>

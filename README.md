@@ -1,74 +1,96 @@
-# React + TypeScript + Vite
+# Brain Pulse
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Science-backed cognitive training. Five domains, twelve minutes a day, scores tied to clinical neuropsychology assessments.
 
-Currently, two official plugins are available:
+**Stack:** React 19 + TypeScript + Vite + Tailwind CSS + Supabase
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Prerequisites
+- Node.js 18+
+- A [Supabase](https://supabase.com) project (free tier is fine)
 
-## Expanding the ESLint configuration
+### 1. Clone and install
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+git clone https://github.com/your-username/brain-pulse.git
+cd brain-pulse
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Configure environment variables
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cp .env.local.example .env.local
 ```
-# brain-pulse
+
+Open `.env.local` and fill in your Supabase credentials. Find them at:
+**supabase.com → your project → Settings → API**
+
+```
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-public-key
+```
+
+### 3. Set up the database
+
+In your Supabase project, open the **SQL editor** and run the contents of `supabase-schema.sql`. This creates the `user_profiles` and `game_sessions` tables, sets up Row Level Security, and adds the trigger that auto-creates a profile on signup.
+
+### 4. Run
+
+```bash
+npm run dev
+```
+
+App runs at `http://localhost:5173`.
+
+---
+
+## Cognitive domains
+
+| Domain  | Color  | Assessment                        |
+|---------|--------|-----------------------------------|
+| Focus   | Blue   | Continuous Performance Test       |
+| Memory  | Green  | Paired-Associate Learning         |
+| Logic   | Yellow | Raven's Progressive Matrices      |
+| Visual  | Sky    | Corsi Block Test                  |
+| Math    | Red    | Intraparietal Sulcus Training     |
+
+---
+
+## Project structure
+
+```
+src/
+├── components/
+│   ├── games/          # One component per cognitive domain
+│   ├── Icons.tsx
+│   ├── RadarChart.tsx
+│   ├── ScoreScreen.tsx
+│   └── StreakBadge.tsx
+├── contexts/
+│   └── AuthContext.tsx
+├── hooks/
+│   ├── useDomainScores.ts
+│   └── useGameSessions.ts
+├── lib/
+│   └── supabase.ts
+├── pages/
+│   ├── Landing.tsx
+│   ├── Login.tsx
+│   ├── Onboarding.tsx
+│   ├── Home.tsx
+│   ├── Session.tsx
+│   ├── SessionComplete.tsx
+│   └── Progress.tsx
+└── types/
+    └── index.ts        # Domain types + DOMAIN_COLORS map
+```
+
+---
+
+## Deployment
+
+The app deploys to Vercel with zero config. Set the two environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) in your Vercel project settings under **Environment Variables**, then push to trigger a deploy.

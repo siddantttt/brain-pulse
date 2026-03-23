@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
+/**
+ * Focus Training — Blue domain (focus / stability / lower cortisol)
+ * Deep blue promotes sustained attention and stability.
+ */
+
 interface Target {
   id: number
   x: number
@@ -13,14 +18,15 @@ interface Props {
   onComplete: (score: number) => void
 }
 
-const COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444']
-const TARGET_COLOR = '#6366f1'
-const DURATION = 45 // seconds
+// Target = focus blue; decoys = muted non-blue colors
+const TARGET_COLOR = '#1B4FD8'
+const DECOY_COLORS = ['#6B7280', '#374151', '#9CA3AF', '#4B5563']
+const DURATION = 45
 
 function getConfig(difficulty: number) {
-  const speed = Math.max(400, 1200 - difficulty * 100)       // ms targets stay
-  const decoys = Math.min(difficulty, 4)                      // extra wrong targets
-  const spawnInterval = Math.max(600, 1400 - difficulty * 80) // ms between spawns
+  const speed = Math.max(400, 1200 - difficulty * 100)
+  const decoys = Math.min(difficulty, 4)
+  const spawnInterval = Math.max(600, 1400 - difficulty * 80)
   return { speed, decoys, spawnInterval }
 }
 
@@ -39,9 +45,8 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
 
   const spawnTargets = useCallback(() => {
     const newTargets: Target[] = []
-    const allColors = COLORS.filter(c => c !== TARGET_COLOR).slice(0, decoys)
+    const decoyColors = DECOY_COLORS.slice(0, decoys)
 
-    // Always spawn one real target
     newTargets.push({
       id: idRef.current++,
       x: 10 + Math.random() * 75,
@@ -50,8 +55,7 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
       isTarget: true,
     })
 
-    // Spawn decoys
-    allColors.forEach(color => {
+    decoyColors.forEach(color => {
       newTargets.push({
         id: idRef.current++,
         x: 10 + Math.random() * 75,
@@ -64,13 +68,11 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
     setTargets(prev => [...prev, ...newTargets])
     setScore(s => ({ ...s, total: s.total + 1 + decoys }))
 
-    // Auto-remove after speed ms
     newTargets.forEach(t => {
       setTimeout(() => removeTarget(t.id), speed)
     })
   }, [decoys, speed, removeTarget])
 
-  // Timer
   useEffect(() => {
     if (!running) return
     if (timeLeft <= 0) {
@@ -85,7 +87,6 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
     return () => clearTimeout(t)
   }, [running, timeLeft, score, onComplete])
 
-  // Spawner
   useEffect(() => {
     if (!running) return
     const interval = setInterval(spawnTargets, spawnInterval)
@@ -114,23 +115,21 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
     return (
       <div className="flex flex-col items-center gap-6 text-center">
         <div>
-          <h2 className="text-2xl font-bold text-white">Focus Training</h2>
-          <p className="text-white/60 mt-2">Click the <span className="text-indigo-400 font-semibold">purple</span> targets only.<br />Ignore all other colors.</p>
+          <h2 className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>Focus Training</h2>
+          <p className="mt-2 text-sm" style={{ color: '#9CA3AF' }}>
+            Click the <span style={{ color: '#93C5FD', fontWeight: 600 }}>blue</span> targets only.<br />Ignore all other targets.
+          </p>
         </div>
-        <div
-          className="relative rounded-2xl border border-white/10"
-          style={{ width: 320, height: 280, backgroundColor: '#16162a' }}
-        >
-          <div
-            className="absolute rounded-full border-2 border-indigo-400"
-            style={{ width: 48, height: 48, left: '50%', top: '50%', transform: 'translate(-50%,-50%)', backgroundColor: TARGET_COLOR }}
-          />
-          <div className="absolute bottom-3 left-0 right-0 text-center text-white/40 text-xs">example target</div>
+        <div className="relative rounded-2xl" style={{ width: 320, height: 280, background: '#0A0F1E', border: '1px solid #1F2937' }}>
+          <div className="absolute rounded-full" style={{
+            width: 48, height: 48, left: '50%', top: '50%',
+            transform: 'translate(-50%,-50%)',
+            background: TARGET_COLOR,
+            boxShadow: '0 0 20px rgba(27,79,216,0.4)',
+          }} />
+          <div className="absolute bottom-3 left-0 right-0 text-center text-xs" style={{ color: '#4B5563' }}>example target</div>
         </div>
-        <button
-          onClick={start}
-          className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-semibold transition-colors"
-        >
+        <button onClick={start} className="btn-primary px-8 py-3">
           Start — {DURATION}s
         </button>
       </div>
@@ -143,45 +142,42 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
     <div className="flex flex-col items-center gap-4">
       <div className="flex items-center justify-between w-full max-w-sm">
         <div className="text-center">
-          <div className="text-2xl font-bold text-white">{timeLeft}s</div>
-          <div className="text-white/40 text-xs">time left</div>
+          <div className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>{timeLeft}s</div>
+          <div className="text-xs" style={{ color: '#6B7280' }}>time left</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-indigo-400">{score.hits}</div>
-          <div className="text-white/40 text-xs">hits</div>
+          <div className="text-2xl font-bold" style={{ color: '#93C5FD' }}>{score.hits}</div>
+          <div className="text-xs" style={{ color: '#6B7280' }}>hits</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-pink-400">{score.misses}</div>
-          <div className="text-white/40 text-xs">misses</div>
+          <div className="text-2xl font-bold" style={{ color: '#FCA5A5' }}>{score.misses}</div>
+          <div className="text-xs" style={{ color: '#6B7280' }}>misses</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-emerald-400">{accuracy}%</div>
-          <div className="text-white/40 text-xs">accuracy</div>
+          <div className="text-2xl font-bold" style={{ color: '#86EFAC' }}>{accuracy}%</div>
+          <div className="text-xs" style={{ color: '#6B7280' }}>accuracy</div>
         </div>
       </div>
 
-      <div
-        className="relative rounded-2xl border border-white/10 overflow-hidden"
-        style={{ width: 340, height: 300, backgroundColor: '#16162a' }}
-      >
+      <div className="relative rounded-2xl overflow-hidden"
+        style={{ width: 340, height: 300, background: '#0A0F1E', border: '1px solid #1F2937' }}>
         {targets.map(target => (
           <button
             key={target.id}
             onClick={() => handleClick(target)}
             className="absolute rounded-full transition-transform hover:scale-110 active:scale-90"
             style={{
-              width: 48,
-              height: 48,
-              left: `${target.x}%`,
-              top: `${target.y}%`,
+              width: 48, height: 48,
+              left: `${target.x}%`, top: `${target.y}%`,
               backgroundColor: target.color,
               transform: 'translate(-50%, -50%)',
-              border: target.isTarget ? '2px solid rgba(255,255,255,0.4)' : '2px solid rgba(255,255,255,0.1)',
+              boxShadow: target.isTarget ? '0 0 16px rgba(27,79,216,0.5)' : 'none',
+              border: target.isTarget ? '2px solid rgba(147,197,253,0.4)' : '2px solid rgba(255,255,255,0.05)',
             }}
           />
         ))}
         {targets.length === 0 && running && (
-          <div className="absolute inset-0 flex items-center justify-center text-white/20 text-sm">
+          <div className="absolute inset-0 flex items-center justify-center text-sm" style={{ color: '#374151' }}>
             Get ready…
           </div>
         )}

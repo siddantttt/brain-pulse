@@ -4,11 +4,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useGameSessions } from '../hooks/useGameSessions'
 import { ChevronLeftIcon } from '../components/Icons'
 import type { Domain } from '../types'
-import { DOMAIN_LABELS } from '../types'
+import { DOMAIN_LABELS, DOMAIN_COLORS } from '../types'
 
-const COLORS: Record<Domain, string> = {
-  focus: '#4f9eff', memory: '#3af0ff', logic: '#ff9f3a', visual: '#c03aff', math: '#ff3a7a',
-}
 const ALL: Domain[] = ['focus', 'memory', 'logic', 'visual', 'math']
 
 export default function Progress() {
@@ -40,81 +37,88 @@ export default function Progress() {
     <div className="min-h-screen max-w-lg mx-auto px-4 py-8">
 
       <div className="flex items-center gap-3 mb-10">
-        <button onClick={() => navigate(-1)} style={{ color: '#444' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#888')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#444')}>
+        <button onClick={() => navigate(-1)} style={{ color: '#6B7280' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#9CA3AF')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#6B7280')}>
           <ChevronLeftIcon size={18} />
         </button>
         <h1 className="font-semibold tracking-tight">Progress</h1>
       </div>
 
       {loading ? (
-        <div className="text-sm text-center py-20" style={{ color: '#333' }}>Loading…</div>
+        <div className="text-sm text-center py-20" style={{ color: '#4B5563' }}>Loading…</div>
       ) : sessions.length === 0 ? (
         <div className="text-center py-20">
-          <p className="text-sm mb-4" style={{ color: '#444' }}>No sessions yet</p>
+          <p className="text-sm mb-4" style={{ color: '#6B7280' }}>No sessions yet</p>
           <button onClick={() => navigate('/home')} className="btn-primary px-6 py-2.5 text-sm">Start training</button>
         </div>
       ) : (
         <>
-          {/* Domain toggles */}
+          {/* Domain toggles — each in its cognitive color */}
           <div className="flex flex-wrap gap-2 mb-6">
-            {ALL.map(d => (
-              <button key={d} onClick={() => toggle(d)}
-                className="px-3 py-1 rounded-full text-xs font-medium border transition-all"
-                style={hidden.has(d)
-                  ? { background: 'transparent', borderColor: '#1e1e1e', color: '#333' }
-                  : { background: `${COLORS[d]}12`, borderColor: `${COLORS[d]}30`, color: COLORS[d] }}>
-                {DOMAIN_LABELS[d]}
-              </button>
-            ))}
+            {ALL.map(d => {
+              const dc = DOMAIN_COLORS[d]
+              return (
+                <button key={d} onClick={() => toggle(d)}
+                  className="px-3 py-1 rounded-full text-xs font-medium border transition-all"
+                  style={hidden.has(d)
+                    ? { background: 'transparent', borderColor: '#1F2937', color: '#4B5563' }
+                    : { background: dc.primary + '18', borderColor: dc.primary + '50', color: dc.light }}>
+                  {DOMAIN_LABELS[d]}
+                </button>
+              )
+            })}
           </div>
 
           {/* Chart */}
-          <div className="rounded-2xl p-5 mb-4" style={{ background: '#111', border: '1px solid #1e1e1e' }}>
-            <p className="text-xs uppercase tracking-widest mb-6" style={{ color: '#444' }}>14-Day History</p>
+          <div className="rounded-2xl p-5 mb-4" style={{ background: '#111827', border: '1px solid #1F2937' }}>
+            <p className="text-xs uppercase tracking-widest mb-6" style={{ color: '#4B5563' }}>14-Day History</p>
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={chartData} margin={{ top: 0, right: 0, left: -28, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-                <XAxis dataKey="date" tick={{ fill: '#333', fontSize: 10 }} interval={3} />
-                <YAxis domain={[0, 100]} tick={{ fill: '#333', fontSize: 10 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
+                <XAxis dataKey="date" tick={{ fill: '#4B5563', fontSize: 10 }} interval={3} />
+                <YAxis domain={[0, 100]} tick={{ fill: '#4B5563', fontSize: 10 }} />
                 <Tooltip
-                  contentStyle={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 12, color: '#f0f0f0', fontSize: 12 }}
-                  labelStyle={{ color: '#555', marginBottom: 4 }}
+                  contentStyle={{ background: '#111827', border: '1px solid #1F2937', borderRadius: 12, color: '#F9FAFB', fontSize: 12 }}
+                  labelStyle={{ color: '#9CA3AF', marginBottom: 4 }}
                 />
                 {ALL.filter(d => !hidden.has(d)).map(d => (
                   <Line key={d} type="monotone" dataKey={d} name={DOMAIN_LABELS[d]}
-                    stroke={COLORS[d]} strokeWidth={1.5} dot={false} connectNulls />
+                    stroke={DOMAIN_COLORS[d].primary} strokeWidth={1.5} dot={false} connectNulls />
                 ))}
               </LineChart>
             </ResponsiveContainer>
           </div>
 
           {/* Per-domain stats */}
-          <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #1e1e1e' }}>
+          <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #1F2937' }}>
             {ALL.map((d, i) => {
               const ds = sessions.filter(s => s.domain === d)
               if (!ds.length) return null
+              const dc = DOMAIN_COLORS[d]
               const avg = Math.round(ds.reduce((a, b) => a + b.score, 0) / ds.length)
               const best = Math.round(Math.max(...ds.map(s => s.score)))
               return (
                 <div key={d} className="flex items-center justify-between px-4 py-3.5"
-                  style={{ background: '#111', borderBottom: i < ALL.length - 1 ? '1px solid #1a1a1a' : 'none' }}>
+                  style={{
+                    background: '#111827',
+                    borderBottom: i < ALL.length - 1 ? '1px solid #1F2937' : 'none',
+                    borderLeft: `2px solid ${dc.primary}`,
+                  }}>
                   <div className="flex items-center gap-2.5">
-                    <div className="w-1.5 h-4 rounded-full" style={{ background: COLORS[d] }} />
-                    <span className="text-sm">{DOMAIN_LABELS[d]}</span>
+                    <span className="text-sm" style={{ color: dc.light }}>{DOMAIN_LABELS[d]}</span>
                   </div>
                   <div className="flex gap-6 text-xs">
                     <div className="text-center">
-                      <div style={{ color: '#444' }}>avg</div>
+                      <div style={{ color: '#4B5563' }}>avg</div>
                       <div className="font-medium">{avg}</div>
                     </div>
                     <div className="text-center">
-                      <div style={{ color: '#444' }}>best</div>
-                      <div className="font-medium" style={{ color: COLORS[d] }}>{best}</div>
+                      <div style={{ color: '#4B5563' }}>best</div>
+                      <div className="font-medium" style={{ color: dc.light }}>{best}</div>
                     </div>
                     <div className="text-center">
-                      <div style={{ color: '#444' }}>games</div>
+                      <div style={{ color: '#4B5563' }}>games</div>
                       <div className="font-medium">{ds.length}</div>
                     </div>
                   </div>

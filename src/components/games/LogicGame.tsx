@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react'
 
+/**
+ * Pattern Recognition — Yellow domain (logic / creativity / optimism)
+ * Amber/yellow stimulates pattern-matching and encourages optimism.
+ */
+
 interface Props {
   difficulty: number
   onComplete: (score: number) => void
@@ -19,14 +24,12 @@ function generateQuestion(difficulty: number): Question {
   const base = Math.floor(Math.random() * (difficulty * 2)) + 1
 
   if (type === 0) {
-    // Arithmetic: +n sequence
     const step = Math.floor(Math.random() * (difficulty + 1)) + 1
     const start = Math.floor(Math.random() * 10) + 1
     const len = difficulty >= 6 ? 5 : 4
     sequence = Array.from({ length: len }, (_, i) => start + i * step)
     answer = start + len * step
   } else if (type === 1) {
-    // Geometric: *n sequence (only for higher difficulties)
     if (difficulty >= 4) {
       const ratio = Math.floor(Math.random() * 2) + 2
       sequence = [base, base * ratio, base * ratio ** 2, base * ratio ** 3]
@@ -37,14 +40,12 @@ function generateQuestion(difficulty: number): Question {
       answer = 1 + step * 4
     }
   } else {
-    // Fibonacci-style: a, b, a+b, ...
     const a = Math.floor(Math.random() * 5) + 1
     const b = Math.floor(Math.random() * 5) + a
     sequence = [a, b, a + b, a + b + b]
     answer = a + b + b + (a + b)
   }
 
-  // Generate plausible wrong options
   const wrongSet = new Set<number>()
   while (wrongSet.size < 3) {
     const offset = Math.floor(Math.random() * 8) - 4
@@ -53,12 +54,11 @@ function generateQuestion(difficulty: number): Question {
   }
 
   const options = [answer, ...Array.from(wrongSet)].sort(() => Math.random() - 0.5)
-
   return { sequence, answer, options }
 }
 
 const TOTAL = 8
-const TIME_PER_Q = 10 // seconds
+const TIME_PER_Q = 10
 
 export default function LogicGame({ difficulty, onComplete }: Props) {
   const [questions] = useState<Question[]>(() =>
@@ -74,10 +74,7 @@ export default function LogicGame({ difficulty, onComplete }: Props) {
 
   useEffect(() => {
     if (done || selected !== null) return
-    if (timeLeft <= 0) {
-      advance(false)
-      return
-    }
+    if (timeLeft <= 0) { advance(false); return }
     const t = setTimeout(() => setTimeLeft(s => s - 1), 1000)
     return () => clearTimeout(t)
   }, [timeLeft, done, selected])
@@ -106,42 +103,37 @@ export default function LogicGame({ difficulty, onComplete }: Props) {
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-sm mx-auto">
       <div className="flex items-center justify-between w-full">
-        <span className="text-white/50 text-sm">Question {current + 1}/{TOTAL}</span>
+        <span className="text-sm" style={{ color: '#9CA3AF' }}>Question {current + 1}/{TOTAL}</span>
         <div className="flex items-center gap-2">
-          <div
-            className="h-1.5 rounded-full bg-indigo-500 transition-all"
-            style={{ width: `${(timeLeft / TIME_PER_Q) * 80}px` }}
-          />
-          <span className="text-white/50 text-sm w-6">{timeLeft}s</span>
+          <div className="h-1.5 rounded-full transition-all"
+            style={{ width: `${(timeLeft / TIME_PER_Q) * 80}px`, background: '#CA8A04' }} />
+          <span className="text-sm w-6" style={{ color: '#9CA3AF' }}>{timeLeft}s</span>
         </div>
       </div>
 
-      <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
-        <p className="text-white/50 text-sm mb-3">What comes next?</p>
+      <div className="w-full rounded-2xl p-6 text-center"
+        style={{ background: '#111827', border: '1px solid #1F2937' }}>
+        <p className="text-sm mb-3" style={{ color: '#9CA3AF' }}>What comes next?</p>
         <div className="flex items-center justify-center gap-2 flex-wrap">
           {q.sequence.map((n, i) => (
-            <span key={i} className="text-white text-2xl font-bold">{n}</span>
+            <span key={i} className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>{n}</span>
           ))}
-          <span className="text-white/40 text-2xl font-bold">,</span>
-          <span className="text-indigo-400 text-2xl font-bold border-b-2 border-indigo-400 px-3">?</span>
+          <span className="text-2xl font-bold" style={{ color: '#6B7280' }}>,</span>
+          <span className="text-2xl font-bold px-3 border-b-2" style={{ color: '#FDE68A', borderColor: '#CA8A04' }}>?</span>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 w-full">
         {q.options.map((opt, i) => {
-          let bg = 'bg-white/5 hover:bg-white/10 border-white/10'
+          let bg: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', borderColor: '#1F2937', color: '#F9FAFB' }
           if (selected !== null) {
-            if (opt === q.answer) bg = 'bg-emerald-500/20 border-emerald-400'
-            else if (opt === selected && opt !== q.answer) bg = 'bg-red-500/20 border-red-400'
-            else bg = 'bg-white/5 border-white/10'
+            if (opt === q.answer) bg = { background: 'rgba(202,138,4,0.2)', borderColor: '#CA8A04', color: '#FDE68A' }
+            else if (opt === selected && opt !== q.answer) bg = { background: 'rgba(220,38,38,0.15)', borderColor: '#DC2626', color: '#FCA5A5' }
           }
           return (
-            <button
-              key={i}
-              onClick={() => handleAnswer(opt)}
-              disabled={selected !== null}
-              className={`py-4 rounded-xl text-white text-xl font-bold border transition-colors ${bg}`}
-            >
+            <button key={i} onClick={() => handleAnswer(opt)} disabled={selected !== null}
+              className="py-4 rounded-xl text-xl font-bold border transition-colors"
+              style={bg}>
               {opt}
             </button>
           )
@@ -150,12 +142,8 @@ export default function LogicGame({ difficulty, onComplete }: Props) {
 
       <div className="flex gap-1">
         {questions.map((_, i) => (
-          <div
-            key={i}
-            className={`h-1.5 w-6 rounded-full transition-colors ${
-              i < current ? 'bg-indigo-500' : i === current ? 'bg-indigo-300' : 'bg-white/10'
-            }`}
-          />
+          <div key={i} className="h-1.5 w-6 rounded-full transition-colors"
+            style={{ background: i < current ? '#CA8A04' : i === current ? '#FDE68A' : '#1F2937' }} />
         ))}
       </div>
     </div>

@@ -38,11 +38,21 @@ export function useGameSessions() {
       .slice(0, count)
   }
 
-  function computeDifficulty(domain: Domain, baseDifficulty = 3): number {
+  function computeDifficulty(domain: Domain): number {
     const last3 = getLastScoresForDomain(domain, 3)
-    if (last3.length === 0) return baseDifficulty
+
+    // No history — start at 3 for new users
+    if (last3.length === 0) return 3
+
+    // Anchor to the most recent session's actual difficulty, not a hardcoded value.
+    // This lets difficulty genuinely traverse 1–10 across sessions.
+    const baseDifficulty = last3[0].difficulty
     const avg = last3.reduce((a, b) => a + b.score, 0) / last3.length
-    if (avg > 75) return Math.min(baseDifficulty + 1, 10)
+
+    // Graduated curve: larger jumps at the extremes, smaller in the middle
+    if (avg > 80) return Math.min(baseDifficulty + 2, 10)
+    if (avg > 65) return Math.min(baseDifficulty + 1, 10)
+    if (avg < 25) return Math.max(baseDifficulty - 2, 1)
     if (avg < 40) return Math.max(baseDifficulty - 1, 1)
     return baseDifficulty
   }

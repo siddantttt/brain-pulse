@@ -9,7 +9,7 @@ import MathGame from '../components/games/MathGame'
 import ScoreScreen from '../components/ScoreScreen'
 import { CloseIcon, FocusIcon, MemoryIcon, LogicIcon, VisualIcon, MathIcon } from '../components/Icons'
 import type { Domain } from '../types'
-import { DOMAIN_LABELS } from '../types'
+import { DOMAIN_LABELS, DOMAIN_COLORS } from '../types'
 
 const DOMAIN_ICONS = { focus: FocusIcon, memory: MemoryIcon, logic: LogicIcon, visual: VisualIcon, math: MathIcon }
 
@@ -45,6 +45,7 @@ export default function Session() {
   const domain = plan[gameIdx]
   const difficulty = computeDifficulty(domain)
   const Icon = DOMAIN_ICONS[domain]
+  const dc = DOMAIN_COLORS[domain]
 
   async function handleGameComplete(score: number) {
     setCurrentScore(score)
@@ -67,29 +68,40 @@ export default function Session() {
 
       {/* Header */}
       <div className="flex items-center gap-4 mb-10">
-        <button onClick={() => navigate('/home')} style={{ color: '#333' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#666')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#333')}>
+        <button onClick={() => navigate('/home')} style={{ color: '#4B5563' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#9CA3AF')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#4B5563')}>
           <CloseIcon size={18} />
         </button>
+        {/* Progress bar segments — each segment takes the color of its domain */}
         <div className="flex-1 flex gap-1.5">
-          {plan.map((_, i) => (
+          {plan.map((d, i) => (
             <div key={i} className="flex-1 rounded-full transition-all"
-              style={{ height: 2, background: i < gameIdx ? '#4f9eff' : i === gameIdx ? 'rgba(79,158,255,0.4)' : '#1e1e1e' }} />
+              style={{
+                height: 2,
+                background: i < gameIdx
+                  ? DOMAIN_COLORS[d].primary
+                  : i === gameIdx
+                    ? DOMAIN_COLORS[d].primary + '60'
+                    : '#1F2937',
+              }} />
           ))}
         </div>
-        <span className="text-xs" style={{ color: '#333' }}>{gameIdx + 1}/{plan.length}</span>
+        <span className="text-xs" style={{ color: '#4B5563' }}>{gameIdx + 1}/{plan.length}</span>
       </div>
 
-      {/* Domain label */}
+      {/* Domain label — shifts color with the active cognitive domain */}
       {phase === 'playing' && (
         <div className="flex items-center gap-3 mb-8">
-          <div className="p-2 rounded-xl" style={{ background: 'rgba(79,158,255,0.08)', border: '1px solid rgba(79,158,255,0.12)' }}>
-            <Icon size={16} style={{ color: '#4f9eff' }} />
+          <div className="p-2 rounded-xl"
+            style={{ background: dc.primary + '18', border: `1px solid ${dc.primary}30` }}>
+            <Icon size={16} style={{ color: dc.primary }} />
           </div>
           <div>
-            <p className="font-semibold text-sm">{DOMAIN_LABELS[domain]} · Level {difficulty}</p>
-            <p className="text-xs mt-0.5" style={{ color: '#444' }}>{DOMAIN_SCIENCE[domain]}</p>
+            <p className="font-semibold text-sm" style={{ color: dc.light }}>
+              {DOMAIN_LABELS[domain]} · Level {difficulty}
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>{DOMAIN_SCIENCE[domain]}</p>
           </div>
         </div>
       )}

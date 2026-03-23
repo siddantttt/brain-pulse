@@ -33,7 +33,7 @@ export default function Landing() {
         <div className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto">
           <div className="flex items-center gap-2.5">
             <PulseIcon size={18} style={{ color: '#1B4FD8' }} />
-            <span className="font-semibold tracking-tight text-white">Brain Pulse</span>
+            <span className="font-semibold tracking-tight" style={{ color: '#F9FAFB' }}>Brain Pulse</span>
           </div>
           <div className="flex items-center gap-2">
             {!loading && user ? (
