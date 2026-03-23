@@ -4,11 +4,11 @@ import { useDomainScores } from '../hooks/useDomainScores'
 import { useGameSessions } from '../hooks/useGameSessions'
 import BrainRadarChart from '../components/RadarChart'
 import StreakBadge from '../components/StreakBadge'
-import { PulseIcon, FocusIcon, MemoryIcon, LogicIcon, VisualIcon, MathIcon, ArrowRightIcon, TrendUpIcon } from '../components/Icons'
+import { PulseIcon, FocusIcon, MemoryIcon, LogicIcon, VisualIcon, MathIcon, FlexibilityIcon, ArrowRightIcon, TrendUpIcon } from '../components/Icons'
 import type { Domain } from '../types'
 import { DOMAIN_LABELS, DOMAIN_COLORS } from '../types'
 
-const DOMAIN_ICONS = { focus: FocusIcon, memory: MemoryIcon, logic: LogicIcon, visual: VisualIcon, math: MathIcon }
+const DOMAIN_ICONS = { focus: FocusIcon, memory: MemoryIcon, logic: LogicIcon, visual: VisualIcon, math: MathIcon, flexibility: FlexibilityIcon }
 
 function getDailyPlan(goal: Domain | null, scores: Record<Domain, number>): Domain[] {
   const all: Domain[] = ['focus', 'memory', 'logic', 'visual', 'math']
@@ -64,7 +64,7 @@ export default function Home() {
           </div>
         )}
         {/* Domain scores — each labelled in its cognitive color */}
-        <div className="grid grid-cols-5 gap-2 mt-4">
+        <div className="grid grid-cols-6 gap-2 mt-4">
           {(Object.keys(scores) as Domain[]).map(d => {
             const Icon = DOMAIN_ICONS[d]
             const dc = DOMAIN_COLORS[d]

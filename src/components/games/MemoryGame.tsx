@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import type { GameMetrics } from '../../types'
 
 /**
  * Memory Match — Green domain (memory / concentration / reduced fatigue)
@@ -14,7 +15,7 @@ interface Card {
 
 interface Props {
   difficulty: number
-  onComplete: (score: number) => void
+  onComplete: (score: number, metrics: GameMetrics) => void
 }
 
 const EMOJIS = ['🧠', '⚡', '🔥', '🌙', '💎', '🎯', '🌊', '🎭', '🦋', '🌈', '🚀', '🎸']
@@ -35,6 +36,7 @@ function buildDeck(pairs: number): Card[] {
 
 export default function MemoryGame({ difficulty, onComplete }: Props) {
   const pairs = getGridSize(difficulty)
+  const [started, setStarted] = useState(false)
   const [cards, setCards] = useState<Card[]>(() => buildDeck(pairs))
   const [flipped, setFlipped] = useState<number[]>([])
   const [matched, setMatched] = useState(0)
@@ -43,21 +45,29 @@ export default function MemoryGame({ difficulty, onComplete }: Props) {
   const [previewCountdown, setPreviewCountdown] = useState(3)
   const [locked, setLocked] = useState(false)
 
+  const pairTimesRef = useRef<number[]>([])
+  const lastPairTimeRef = useRef(0)
+
   useEffect(() => {
+    if (!started) return
     setCards(buildDeck(pairs))
     setFlipped([])
     setMatched(0)
     setMoves(0)
     setPhase('preview')
     setPreviewCountdown(3)
-  }, [pairs])
+  }, [pairs, started])
 
   useEffect(() => {
-    if (phase !== 'preview') return
-    if (previewCountdown <= 0) { setPhase('play'); return }
+    if (!started || phase !== 'preview') return
+    if (previewCountdown <= 0) {
+      setPhase('play')
+      lastPairTimeRef.current = Date.now()
+      return
+    }
     const t = setTimeout(() => setPreviewCountdown(c => c - 1), 1000)
     return () => clearTimeout(t)
-  }, [phase, previewCountdown])
+  }, [started, phase, previewCountdown])
 
   const handleFlip = useCallback((idx: number) => {
     if (locked || phase !== 'play') return
@@ -79,10 +89,34 @@ export default function MemoryGame({ difficulty, onComplete }: Props) {
           ))
           setMatched(m => {
             const newMatched = m + 1
+            pairTimesRef.current.push(Date.now() - lastPairTimeRef.current)
+            lastPairTimeRef.current = Date.now()
+
             if (newMatched === pairs) {
               const maxMoves = pairs * 2
               const score = Math.max(40, Math.round(100 - ((moves + 1 - pairs) / maxMoves) * 60))
-              setTimeout(() => onComplete(Math.min(100, score)), 500)
+              const clampedScore = Math.min(100, score)
+
+              const avgRT = pairTimesRef.current.length > 0
+                ? Math.round(pairTimesRef.current.reduce((a, b) => a + b, 0) / pairTimesRef.current.length)
+                : 3000
+
+              const half = Math.floor(pairTimesRef.current.length / 2)
+              let droppedUnderPressure = false
+              if (half >= 2) {
+                const firstHalfAvg = pairTimesRef.current.slice(0, half).reduce((a, b) => a + b, 0) / half
+                const secondHalfAvg = pairTimesRef.current.slice(half).reduce((a, b) => a + b, 0) / (pairTimesRef.current.length - half)
+                droppedUnderPressure = secondHalfAvg > firstHalfAvg * 1.3
+              }
+
+              const metrics: GameMetrics = {
+                accuracy: 100,
+                avgResponseTime: avgRT,
+                droppedUnderPressure,
+                domain: 'memory',
+              }
+
+              setTimeout(() => onComplete(clampedScore, metrics), 500)
             }
             return newMatched
           })
@@ -98,6 +132,33 @@ export default function MemoryGame({ difficulty, onComplete }: Props) {
   }, [locked, phase, cards, flipped, pairs, moves, onComplete])
 
   const cols = 4
+
+  if (!started) {
+    return (
+      <div className="flex flex-col items-center gap-6 text-center">
+        <div>
+          <p className="text-sm mb-4 max-w-xs leading-relaxed" style={{ color: '#9CA3AF' }}>
+            This one tests how much your brain can hold and recall under pressure.
+          </p>
+          <h2 className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>Memory Match</h2>
+          <p className="text-sm mt-2" style={{ color: '#9CA3AF' }}>
+            Memorise the cards, then match pairs from memory.
+          </p>
+        </div>
+        <div className="grid grid-cols-4 gap-2" style={{ maxWidth: 280 }}>
+          {['🧠', '⚡', '🔥', '🌙', '🧠', '⚡', '🔥', '🌙'].map((e, i) => (
+            <div key={i} className="w-14 h-14 rounded-xl text-2xl flex items-center justify-center border"
+              style={{ background: i < 4 ? 'rgba(22,163,74,0.08)' : 'rgba(255,255,255,0.04)', borderColor: i < 4 ? 'rgba(22,163,74,0.25)' : '#1F2937' }}>
+              {i < 4 ? e : '?'}
+            </div>
+          ))}
+        </div>
+        <button onClick={() => setStarted(true)} className="btn-primary px-8 py-3">
+          Start
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col items-center gap-6">

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import type { GameMetrics } from '../../types'
 
 /**
  * Focus Training — Blue domain (focus / stability / lower cortisol)
@@ -15,10 +16,9 @@ interface Target {
 
 interface Props {
   difficulty: number
-  onComplete: (score: number) => void
+  onComplete: (score: number, metrics: GameMetrics) => void
 }
 
-// Target = focus blue; decoys = muted non-blue colors
 const TARGET_COLOR = '#1B4FD8'
 const DECOY_COLORS = ['#6B7280', '#374151', '#9CA3AF', '#4B5563']
 const DURATION = 45
@@ -39,6 +39,10 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
   const idRef = useRef(0)
   const { speed, decoys, spawnInterval } = getConfig(difficulty)
 
+  const spawnTimesRef = useRef<Record<number, number>>({})
+  const responseTimesRef = useRef<number[]>([])
+  const halfScoreRef = useRef<{ hits: number; misses: number } | null>(null)
+
   const removeTarget = useCallback((id: number) => {
     setTargets(prev => prev.filter(t => t.id !== id))
   }, [])
@@ -46,23 +50,28 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
   const spawnTargets = useCallback(() => {
     const newTargets: Target[] = []
     const decoyColors = DECOY_COLORS.slice(0, decoys)
+    const now = Date.now()
 
-    newTargets.push({
+    const targetTarget: Target = {
       id: idRef.current++,
       x: 10 + Math.random() * 75,
       y: 10 + Math.random() * 75,
       color: TARGET_COLOR,
       isTarget: true,
-    })
+    }
+    spawnTimesRef.current[targetTarget.id] = now
+    newTargets.push(targetTarget)
 
     decoyColors.forEach(color => {
-      newTargets.push({
+      const decoy: Target = {
         id: idRef.current++,
         x: 10 + Math.random() * 75,
         y: 10 + Math.random() * 75,
         color,
         isTarget: false,
-      })
+      }
+      spawnTimesRef.current[decoy.id] = now
+      newTargets.push(decoy)
     })
 
     setTargets(prev => [...prev, ...newTargets])
@@ -80,12 +89,45 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
       setTargets([])
       const finalScore = score.total === 0 ? 0 :
         Math.round((score.hits / Math.max(score.total - score.misses * 2, 1)) * 100)
-      onComplete(Math.min(100, Math.max(0, finalScore)))
+      const clampedScore = Math.min(100, Math.max(0, finalScore))
+
+      const clickAcc = (score.hits + score.misses) > 0
+        ? score.hits / (score.hits + score.misses)
+        : 0
+      const avgRT = responseTimesRef.current.length > 0
+        ? Math.round(responseTimesRef.current.reduce((a, b) => a + b, 0) / responseTimesRef.current.length)
+        : speed
+
+      let droppedUnderPressure = false
+      if (halfScoreRef.current) {
+        const half = halfScoreRef.current
+        const firstHalfTotal = half.hits + half.misses
+        const firstHalfAcc = firstHalfTotal > 0 ? half.hits / firstHalfTotal : 0
+        const secondHalfHits = score.hits - half.hits
+        const secondHalfMisses = score.misses - half.misses
+        const secondHalfTotal = secondHalfHits + secondHalfMisses
+        const secondHalfAcc = secondHalfTotal > 0 ? secondHalfHits / secondHalfTotal : 0
+        droppedUnderPressure = firstHalfTotal > 2 && (firstHalfAcc - secondHalfAcc) > 0.15
+      }
+
+      const metrics: GameMetrics = {
+        accuracy: Math.round(clickAcc * 100),
+        avgResponseTime: avgRT,
+        droppedUnderPressure,
+        domain: 'attention',
+      }
+
+      onComplete(clampedScore, metrics)
       return
     }
+
+    if (timeLeft === Math.ceil(DURATION / 2)) {
+      halfScoreRef.current = { hits: score.hits, misses: score.misses }
+    }
+
     const t = setTimeout(() => setTimeLeft(s => s - 1), 1000)
     return () => clearTimeout(t)
-  }, [running, timeLeft, score, onComplete])
+  }, [running, timeLeft, score, onComplete, speed])
 
   useEffect(() => {
     if (!running) return
@@ -97,6 +139,8 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
     if (!running) return
     removeTarget(target.id)
     if (target.isTarget) {
+      const rt = Date.now() - (spawnTimesRef.current[target.id] ?? Date.now())
+      responseTimesRef.current.push(rt)
       setScore(s => ({ ...s, hits: s.hits + 1 }))
     } else {
       setScore(s => ({ ...s, misses: s.misses + 1 }))
@@ -109,12 +153,17 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
     setTimeLeft(DURATION)
     setScore({ hits: 0, misses: 0, total: 0 })
     setTargets([])
+    responseTimesRef.current = []
+    halfScoreRef.current = null
   }
 
   if (!started) {
     return (
       <div className="flex flex-col items-center gap-6 text-center">
         <div>
+          <p className="text-sm mb-4 max-w-xs leading-relaxed" style={{ color: '#9CA3AF' }}>
+            This one tests how well you tune out distractions and lock onto what matters.
+          </p>
           <h2 className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>Focus Training</h2>
           <p className="mt-2 text-sm" style={{ color: '#9CA3AF' }}>
             Click the <span style={{ color: '#93C5FD', fontWeight: 600 }}>blue</span> targets only.<br />Ignore all other targets.

@@ -6,7 +6,7 @@ import { ChevronLeftIcon } from '../components/Icons'
 import type { Domain } from '../types'
 import { DOMAIN_LABELS, DOMAIN_COLORS } from '../types'
 
-const ALL: Domain[] = ['focus', 'memory', 'logic', 'visual', 'math']
+const ALL: Domain[] = ['focus', 'memory', 'logic', 'visual', 'math', 'flexibility']
 
 export default function Progress() {
   const navigate = useNavigate()

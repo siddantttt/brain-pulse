@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import type { GameMetrics } from '../../types'
 
 /**
  * Spatial Recall (Corsi Block Test) — Sky Blue domain (visuospatial attention)
@@ -8,7 +9,7 @@ import { useState } from 'react'
 
 interface Props {
   difficulty: number
-  onComplete: (score: number) => void
+  onComplete: (score: number, metrics: GameMetrics) => void
 }
 
 const GRID = 16
@@ -39,6 +40,9 @@ export default function VisualGame({ difficulty, onComplete }: Props) {
   const [round, setRound] = useState(0)
   const [scores, setScores] = useState<number[]>([])
 
+  const roundTimesRef = useRef<number[]>([])
+  const roundStartRef = useRef(0)
+
   function startRound() {
     const seq = randomSequence(seqLen)
     setSequence(seq)
@@ -52,7 +56,10 @@ export default function VisualGame({ difficulty, onComplete }: Props) {
     function next() {
       if (i >= seq.length) {
         setHighlighted(null)
-        setTimeout(() => setPhase('input'), 400)
+        setTimeout(() => {
+          setPhase('input')
+          roundStartRef.current = Date.now()
+        }, 400)
         return
       }
       setHighlighted(seq[i])
@@ -75,11 +82,33 @@ export default function VisualGame({ difficulty, onComplete }: Props) {
       const roundScore = correct / sequence.length
       const newScores = [...scores, roundScore]
       setScores(newScores)
+      roundTimesRef.current.push(Date.now() - roundStartRef.current)
       setPhase('feedback')
 
       if (round + 1 >= ROUNDS) {
         const avg = newScores.reduce((a, b) => a + b, 0) / newScores.length
-        setTimeout(() => onComplete(Math.round(avg * 100)), 900)
+
+        const avgRT = roundTimesRef.current.length > 0
+          ? Math.round(roundTimesRef.current.reduce((a, b) => a + b, 0) / roundTimesRef.current.length)
+          : 5000
+
+        let droppedUnderPressure = false
+        if (newScores.length >= 4) {
+          const firstHalf = newScores.slice(0, Math.floor(newScores.length / 2))
+          const secondHalf = newScores.slice(Math.floor(newScores.length / 2))
+          const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length
+          const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length
+          droppedUnderPressure = firstAvg - secondAvg > 0.2
+        }
+
+        const metrics: GameMetrics = {
+          accuracy: Math.round(avg * 100),
+          avgResponseTime: avgRT,
+          droppedUnderPressure,
+          domain: 'spatial',
+        }
+
+        setTimeout(() => onComplete(Math.round(avg * 100), metrics), 900)
       } else {
         setTimeout(() => {
           setRound(r => r + 1)
@@ -109,13 +138,42 @@ export default function VisualGame({ difficulty, onComplete }: Props) {
     }
   }
 
+  if (phase === 'intro') {
+    return (
+      <div className="flex flex-col items-center gap-6 text-center">
+        <div>
+          <p className="text-sm mb-4 max-w-xs leading-relaxed" style={{ color: '#9CA3AF' }}>
+            This one tests how well your brain remembers sequences in space.
+          </p>
+          <h2 className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>Spatial Recall</h2>
+          <p className="text-sm mt-2" style={{ color: '#9CA3AF' }}>
+            Watch the sequence flash, then tap the cells in the same order.
+          </p>
+        </div>
+        <div className="grid grid-cols-4 gap-2" style={{ width: 200 }}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="w-10 h-10 rounded-lg border"
+              style={i === 2 || i === 5
+                ? { background: '#0284C7', borderColor: '#7DD3FC', boxShadow: '0 0 12px rgba(2,132,199,0.4)' }
+                : { background: 'rgba(255,255,255,0.04)', borderColor: '#1F2937' }} />
+          ))}
+        </div>
+        <button onClick={startRound} className="btn-primary px-8 py-3">
+          Start — {ROUNDS} rounds
+        </button>
+        <p className="text-xs text-center max-w-xs" style={{ color: '#374151' }}>
+          Based on the Corsi Block Test · measures visuospatial working memory
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col items-center gap-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>Spatial Recall</h2>
         <p className="text-sm mt-1" style={{ color: '#9CA3AF' }}>
-          {phase === 'intro' ? 'Watch the sequence, then tap the cells in order' :
-           phase === 'showing' ? 'Memorise the sequence…' :
+          {phase === 'showing' ? 'Memorise the sequence…' :
            phase === 'input' ? `Tap ${sequence.length - userInput.length} more cell${sequence.length - userInput.length !== 1 ? 's' : ''}` :
            scores.length > 0 && scores[scores.length - 1] === 1 ? '✓ Perfect!' : 'Keep going'}
         </p>
@@ -139,16 +197,6 @@ export default function VisualGame({ difficulty, onComplete }: Props) {
           )
         })}
       </div>
-
-      {phase === 'intro' && (
-        <button onClick={startRound} className="btn-primary px-8 py-3">
-          Start
-        </button>
-      )}
-
-      <p className="text-xs text-center max-w-xs" style={{ color: '#374151' }}>
-        Based on the Corsi Block Test · measures visuospatial working memory
-      </p>
     </div>
   )
 }

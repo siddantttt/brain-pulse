@@ -4,11 +4,12 @@ import { DOMAIN_COLORS } from '../types'
 
 export default function BrainRadarChart({ scores, size = 280 }: { scores: DomainScores; size?: number }) {
   const data = [
-    { domain: 'Focus',  score: scores.focus },
-    { domain: 'Memory', score: scores.memory },
-    { domain: 'Logic',  score: scores.logic },
-    { domain: 'Visual', score: scores.visual },
-    { domain: 'Math',   score: scores.math },
+    { domain: 'Focus',       score: scores.focus },
+    { domain: 'Memory',      score: scores.memory },
+    { domain: 'Logic',       score: scores.logic },
+    { domain: 'Visual',      score: scores.visual },
+    { domain: 'Math',        score: scores.math },
+    { domain: 'Flexibility', score: scores.flexibility },
   ]
   return (
     <ResponsiveContainer width={size} height={size}>

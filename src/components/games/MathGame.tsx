@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import type { GameMetrics } from '../../types'
 
 /**
  * Speed Math — Red domain (processing speed / reaction time)
@@ -8,7 +9,7 @@ import { useState, useEffect, useRef } from 'react'
 
 interface Props {
   difficulty: number
-  onComplete: (score: number) => void
+  onComplete: (score: number, metrics: GameMetrics) => void
 }
 
 interface Problem {
@@ -65,20 +66,54 @@ export default function MathGame({ difficulty, onComplete }: Props) {
   const [flash, setFlash] = useState<'correct' | 'wrong' | null>(null)
   const doneRef = useRef(false)
 
+  const responseTimesRef = useRef<number[]>([])
+  const problemStartRef = useRef(Date.now())
+  const halfStatsRef = useRef<{ correct: number; total: number } | null>(null)
+
   useEffect(() => {
     if (!started || doneRef.current) return
     if (timeLeft <= 0) {
       doneRef.current = true
       const score = total === 0 ? 0 : Math.round((correct / total) * 100)
-      onComplete(score)
+
+      const avgRT = responseTimesRef.current.length > 0
+        ? Math.round(responseTimesRef.current.reduce((a, b) => a + b, 0) / responseTimesRef.current.length)
+        : 3000
+
+      let droppedUnderPressure = false
+      if (halfStatsRef.current && halfStatsRef.current.total >= 2) {
+        const half = halfStatsRef.current
+        const firstHalfAcc = half.correct / half.total
+        const secondHalfCorrect = correct - half.correct
+        const secondHalfTotal = total - half.total
+        const secondHalfAcc = secondHalfTotal > 0 ? secondHalfCorrect / secondHalfTotal : 0
+        droppedUnderPressure = firstHalfAcc - secondHalfAcc > 0.15
+      }
+
+      const metrics: GameMetrics = {
+        accuracy: score,
+        avgResponseTime: avgRT,
+        droppedUnderPressure,
+        domain: 'speed',
+      }
+
+      onComplete(score, metrics)
       return
     }
+
+    if (timeLeft === Math.ceil(duration / 2) && !halfStatsRef.current) {
+      halfStatsRef.current = { correct, total }
+    }
+
     const t = setTimeout(() => setTimeLeft(s => s - 1), 1000)
     return () => clearTimeout(t)
-  }, [started, timeLeft, correct, total, onComplete])
+  }, [started, timeLeft, correct, total, duration, onComplete])
 
   function handleAnswer(opt: number) {
     if (!started || doneRef.current) return
+    const rt = Date.now() - problemStartRef.current
+    responseTimesRef.current.push(rt)
+
     const isCorrect = opt === problem.answer
     setFlash(isCorrect ? 'correct' : 'wrong')
     setCorrect(c => isCorrect ? c + 1 : c)
@@ -86,18 +121,21 @@ export default function MathGame({ difficulty, onComplete }: Props) {
     setTimeout(() => {
       setFlash(null)
       setProblem(makeProblem(difficulty))
+      problemStartRef.current = Date.now()
     }, 300)
   }
 
   const pct = total > 0 ? Math.round((correct / total) * 100) : 0
   const timerPct = (timeLeft / duration) * 100
-  // Timer bar uses red — signals time pressure and urgency (accent only)
   const timerColor = timerPct > 50 ? '#DC2626' : timerPct > 25 ? '#DC2626' : '#FCA5A5'
 
   if (!started) {
     return (
       <div className="flex flex-col items-center gap-6 text-center">
         <div>
+          <p className="text-sm mb-4 max-w-xs leading-relaxed" style={{ color: '#9CA3AF' }}>
+            This one tests how fast your brain makes decisions when time is short.
+          </p>
           <h2 className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>Speed Math</h2>
           <p className="text-sm mt-2" style={{ color: '#9CA3AF' }}>
             Solve as many problems as you can<br />in {duration} seconds.
@@ -107,7 +145,7 @@ export default function MathGame({ difficulty, onComplete }: Props) {
           style={{ background: '#111827', border: '1px solid #1F2937', color: '#F9FAFB' }}>
           7 + 8 = ?
         </div>
-        <button onClick={() => setStarted(true)} className="btn-primary px-8 py-3">
+        <button onClick={() => { setStarted(true); problemStartRef.current = Date.now() }} className="btn-primary px-8 py-3">
           Start — {duration}s
         </button>
         <p className="text-xs max-w-xs" style={{ color: '#374151' }}>
@@ -119,13 +157,11 @@ export default function MathGame({ difficulty, onComplete }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-sm mx-auto">
-      {/* Stats bar */}
       <div className="flex items-center justify-between w-full">
         <div className="text-center">
           <div className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>{timeLeft}s</div>
           <div className="text-xs" style={{ color: '#6B7280' }}>left</div>
         </div>
-        {/* Red timer bar — urgency accent only, not dominant */}
         <div className="flex-1 mx-4">
           <div className="w-full rounded-full h-1.5" style={{ background: '#1F2937' }}>
             <div className="h-1.5 rounded-full transition-all duration-1000"
@@ -138,7 +174,6 @@ export default function MathGame({ difficulty, onComplete }: Props) {
         </div>
       </div>
 
-      {/* Problem */}
       <div className={`w-full p-8 rounded-2xl border text-center transition-colors duration-150`}
         style={
           flash === 'correct'
@@ -153,7 +188,6 @@ export default function MathGame({ difficulty, onComplete }: Props) {
         <div className="text-lg mt-2" style={{ color: '#4B5563' }}>= ?</div>
       </div>
 
-      {/* Options */}
       <div className="grid grid-cols-2 gap-3 w-full">
         {problem.options.map((opt, i) => (
           <button key={i} onClick={() => handleAnswer(opt)}

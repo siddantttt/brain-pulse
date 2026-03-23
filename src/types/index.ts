@@ -1,4 +1,4 @@
-export type Domain = 'focus' | 'memory' | 'logic' | 'visual' | 'math'
+export type Domain = 'focus' | 'memory' | 'logic' | 'visual' | 'math' | 'flexibility'
 
 export interface UserProfile {
   id: string
@@ -24,6 +24,14 @@ export interface DomainScores {
   logic: number
   visual: number
   math: number
+  flexibility: number
+}
+
+export interface GameMetrics {
+  accuracy: number
+  avgResponseTime: number
+  droppedUnderPressure: boolean
+  domain: 'attention' | 'memory' | 'flexibility' | 'speed' | 'pattern' | 'spatial'
 }
 
 export const DOMAIN_LABELS: Record<Domain, string> = {
@@ -32,6 +40,7 @@ export const DOMAIN_LABELS: Record<Domain, string> = {
   logic: 'Logic',
   visual: 'Visual',
   math: 'Math',
+  flexibility: 'Flexibility',
 }
 
 /**
@@ -41,11 +50,13 @@ export const DOMAIN_LABELS: Record<Domain, string> = {
  * Yellow → logic / pattern recognition / creativity
  * Blue2  → visuospatial attention (lighter blue family)
  * Red    → processing speed / reaction time (accent only, never dominant)
+ * Yellow → cognitive flexibility / executive function (same amber family as logic)
  */
 export const DOMAIN_COLORS: Record<Domain, { primary: string; light: string }> = {
-  focus:  { primary: '#1B4FD8', light: '#93C5FD' },
-  memory: { primary: '#16A34A', light: '#86EFAC' },
-  logic:  { primary: '#CA8A04', light: '#FDE68A' },
-  visual: { primary: '#0284C7', light: '#7DD3FC' },
-  math:   { primary: '#DC2626', light: '#FCA5A5' },
+  focus:       { primary: '#1B4FD8', light: '#93C5FD' },
+  memory:      { primary: '#16A34A', light: '#86EFAC' },
+  logic:       { primary: '#CA8A04', light: '#FDE68A' },
+  visual:      { primary: '#0284C7', light: '#7DD3FC' },
+  math:        { primary: '#DC2626', light: '#FCA5A5' },
+  flexibility: { primary: '#CA8A04', light: '#FDE68A' },
 }

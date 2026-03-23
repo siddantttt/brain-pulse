@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import type { GameMetrics } from '../../types'
 
 /**
  * Pattern Recognition — Yellow domain (logic / creativity / optimism)
@@ -7,7 +8,7 @@ import { useState, useEffect } from 'react'
 
 interface Props {
   difficulty: number
-  onComplete: (score: number) => void
+  onComplete: (score: number, metrics: GameMetrics) => void
 }
 
 interface Question {
@@ -61,6 +62,7 @@ const TOTAL = 8
 const TIME_PER_Q = 10
 
 export default function LogicGame({ difficulty, onComplete }: Props) {
+  const [started, setStarted] = useState(false)
   const [questions] = useState<Question[]>(() =>
     Array.from({ length: TOTAL }, () => generateQuestion(difficulty))
   )
@@ -70,26 +72,60 @@ export default function LogicGame({ difficulty, onComplete }: Props) {
   const [timeLeft, setTimeLeft] = useState(TIME_PER_Q)
   const [done, setDone] = useState(false)
 
-  const q = questions[current]
+  const responseTimesRef = useRef<number[]>([])
+  const correctByHalfRef = useRef<number[]>([0, 0])
+  const questionStartRef = useRef(Date.now())
 
   useEffect(() => {
-    if (done || selected !== null) return
+    if (started) questionStartRef.current = Date.now()
+  }, [started])
+
+  useEffect(() => {
+    if (!started || done || selected !== null) return
     if (timeLeft <= 0) { advance(false); return }
     const t = setTimeout(() => setTimeLeft(s => s - 1), 1000)
     return () => clearTimeout(t)
-  }, [timeLeft, done, selected])
+  }, [started, timeLeft, done, selected])
 
   function advance(wasCorrect: boolean) {
+    const rt = Date.now() - questionStartRef.current
+    responseTimesRef.current.push(rt)
+
+    const half = current < TOTAL / 2 ? 0 : 1
+    correctByHalfRef.current[half] += wasCorrect ? 1 : 0
+
     if (wasCorrect) setCorrect(c => c + 1)
+
     if (current + 1 >= TOTAL) {
       setDone(true)
-      const score = Math.round(((wasCorrect ? correct + 1 : correct) / TOTAL) * 100)
-      setTimeout(() => onComplete(score), 600)
+      const finalCorrect = wasCorrect ? correct + 1 : correct
+      const score = Math.round((finalCorrect / TOTAL) * 100)
+
+      const avgRT = responseTimesRef.current.length > 0
+        ? Math.round(responseTimesRef.current.reduce((a, b) => a + b, 0) / responseTimesRef.current.length)
+        : TIME_PER_Q * 1000
+
+      const halfSize = TOTAL / 2
+      const firstHalfAcc = correctByHalfRef.current[0] / halfSize
+      const secondHalfAcc = (wasCorrect
+        ? correctByHalfRef.current[1]
+        : correctByHalfRef.current[1]) / halfSize
+      const droppedUnderPressure = halfSize >= 2 && (firstHalfAcc - secondHalfAcc) > 0.15
+
+      const metrics: GameMetrics = {
+        accuracy: Math.round((finalCorrect / TOTAL) * 100),
+        avgResponseTime: avgRT,
+        droppedUnderPressure,
+        domain: 'pattern',
+      }
+
+      setTimeout(() => onComplete(score, metrics), 600)
     } else {
       setTimeout(() => {
         setCurrent(c => c + 1)
         setSelected(null)
         setTimeLeft(TIME_PER_Q)
+        questionStartRef.current = Date.now()
       }, 600)
     }
   }
@@ -97,8 +133,39 @@ export default function LogicGame({ difficulty, onComplete }: Props) {
   function handleAnswer(opt: number) {
     if (selected !== null || done) return
     setSelected(opt)
-    advance(opt === q.answer)
+    advance(opt === questions[current].answer)
   }
+
+  if (!started) {
+    return (
+      <div className="flex flex-col items-center gap-6 text-center">
+        <div>
+          <p className="text-sm mb-4 max-w-xs leading-relaxed" style={{ color: '#9CA3AF' }}>
+            This one tests how quickly you spot patterns and predict what comes next.
+          </p>
+          <h2 className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>Pattern Recognition</h2>
+          <p className="text-sm mt-2" style={{ color: '#9CA3AF' }}>
+            Complete the number sequence before time runs out.
+          </p>
+        </div>
+        <div className="p-6 rounded-2xl" style={{ background: '#111827', border: '1px solid #1F2937' }}>
+          <p className="text-sm mb-3" style={{ color: '#9CA3AF' }}>Example:</p>
+          <div className="flex items-center justify-center gap-3">
+            {[2, 4, 6, 8].map((n, i) => (
+              <span key={i} className="text-xl font-bold" style={{ color: '#F9FAFB' }}>{n}</span>
+            ))}
+            <span className="text-xl font-bold" style={{ color: '#6B7280' }}>,</span>
+            <span className="text-xl font-bold px-2 border-b-2" style={{ color: '#FDE68A', borderColor: '#CA8A04' }}>10</span>
+          </div>
+        </div>
+        <button onClick={() => setStarted(true)} className="btn-primary px-8 py-3">
+          Start — {TOTAL} questions
+        </button>
+      </div>
+    )
+  }
+
+  const q = questions[current]
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-sm mx-auto">

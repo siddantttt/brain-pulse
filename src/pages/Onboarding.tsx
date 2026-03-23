@@ -18,11 +18,12 @@ const GOALS = [
 ]
 
 const GAME_META: Record<Domain, { title: string; subtitle: string; science: string }> = {
-  focus:  { title: 'Reaction speed test', subtitle: '5 rounds · ~15 seconds',  science: 'Continuous Performance Test · inhibitory control' },
-  memory: { title: 'Memory match',        subtitle: 'Flip & match card pairs',  science: 'Paired-associate learning · visual working memory' },
-  logic:  { title: 'Pattern recognition', subtitle: '5 sequence puzzles',       science: "Raven's Progressive Matrices · fluid intelligence" },
-  visual: { title: 'Spatial recall',      subtitle: '5 rounds',                 science: 'Corsi Block Test · visuospatial memory' },
-  math:   { title: 'Speed math',          subtitle: '45 seconds',               science: 'Numerical cognition training' },
+  focus:       { title: 'Reaction speed test', subtitle: '5 rounds · ~15 seconds',  science: 'Continuous Performance Test · inhibitory control' },
+  memory:      { title: 'Memory match',        subtitle: 'Flip & match card pairs',  science: 'Paired-associate learning · visual working memory' },
+  logic:       { title: 'Pattern recognition', subtitle: '5 sequence puzzles',       science: "Raven's Progressive Matrices · fluid intelligence" },
+  visual:      { title: 'Spatial recall',      subtitle: '5 rounds',                 science: 'Corsi Block Test · visuospatial memory' },
+  math:        { title: 'Speed math',          subtitle: '45 seconds',               science: 'Numerical cognition training' },
+  flexibility: { title: 'Rule shift',          subtitle: '16 cards',                 science: 'Wisconsin Card Sorting Test · cognitive flexibility' },
 }
 
 const ROUNDS = 5
@@ -91,10 +92,12 @@ function ReactionTest({ onComplete, themeColor }: { onComplete: (score: number) 
 }
 
 function BaselineGame({ domain, onComplete, themeColor }: { domain: Domain; onComplete: (s: number) => void; themeColor: string }) {
+  // Wrap game onComplete to drop the metrics argument — onboarding only needs the score
+  const wrap = (score: number, _metrics: unknown) => onComplete(score)
   switch (domain) {
     case 'focus':  return <ReactionTest onComplete={onComplete} themeColor={themeColor} />
-    case 'memory': return <MemoryGame difficulty={2} onComplete={onComplete} />
-    case 'logic':  return <LogicGame difficulty={2} onComplete={onComplete} />
+    case 'memory': return <MemoryGame difficulty={2} onComplete={wrap} />
+    case 'logic':  return <LogicGame difficulty={2} onComplete={wrap} />
     default:       return <ReactionTest onComplete={onComplete} themeColor={themeColor} />
   }
 }
