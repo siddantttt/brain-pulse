@@ -1,15 +1,15 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import FocusGame from '../components/games/FocusGame'
 import MemoryGame from '../components/games/MemoryGame'
 import LogicGame from '../components/games/LogicGame'
 import { PulseIcon, FocusIcon, MemoryIcon, LogicIcon, ArrowRightIcon } from '../components/Icons'
 import type { Domain } from '../types'
 import { DOMAIN_COLORS } from '../types'
 
-type Screen = 'welcome' | 'age' | 'goal' | 'game' | 'auth'
-type TapState = 'waiting' | 'ready' | 'tapped' | 'early'
+type Screen = 'welcome' | 'age' | 'goal' | 'game1' | 'game2' | 'game3' | 'auth'
 
 const GOALS = [
   { domain: 'focus' as Domain,  Icon: FocusIcon,  label: 'Sharper Focus',    desc: 'Improve concentration & attention span' },
@@ -44,78 +44,22 @@ function ageGroupKey(n: number): string {
   return ''
 }
 
-const ROUNDS = 5
-
-function ReactionTest({ onComplete, themeColor }: { onComplete: (score: number) => void; themeColor: string }) {
-  const [round, setRound] = useState(0)
-  const [state, setState] = useState<TapState>('waiting')
-  const [times, setTimes] = useState<number[]>([])
-  const startRef = useRef<number>(0)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    if (round >= ROUNDS) {
-      const avg = times.reduce((a, b) => a + b, 0) / times.length
-      onComplete(Math.max(10, Math.min(100, Math.round(100 - ((avg - 200) / 400) * 60))))
-      return
-    }
-    setState('waiting')
-    const delay = 1200 + Math.random() * 2000
-    timerRef.current = setTimeout(() => { setState('ready'); startRef.current = Date.now() }, delay)
-    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
-  }, [round])
-
-  function handleTap() {
-    if (state === 'waiting') {
-      if (timerRef.current) clearTimeout(timerRef.current)
-      setState('early')
-      setTimeout(() => setRound(r => r + 1), 800)
-    } else if (state === 'ready') {
-      setTimes(prev => [...prev, Date.now() - startRef.current])
-      setState('tapped')
-      setTimeout(() => setRound(r => r + 1), 600)
-    }
+function getGameSequence(g: Domain | null): [Domain, Domain, Domain] {
+  switch (g) {
+    case 'focus':  return ['focus', 'memory', 'logic']
+    case 'memory': return ['memory', 'focus', 'logic']
+    case 'logic':  return ['logic', 'memory', 'focus']
+    default:       return ['focus', 'memory', 'logic']
   }
-
-  if (round >= ROUNDS) return <div className="text-sm text-center" style={{ color: '#6B7280' }}>Calculating…</div>
-
-  return (
-    <div className="flex flex-col items-center gap-8">
-      <div className="flex gap-1.5">
-        {Array.from({ length: ROUNDS }).map((_, i) => (
-          <div key={i} className="w-8 rounded-full transition-all" style={{
-            height: 2,
-            background: i < round ? themeColor : i === round ? themeColor + '60' : '#1F2937'
-          }} />
-        ))}
-      </div>
-      <button onClick={handleTap}
-        className="w-44 h-44 rounded-full flex flex-col items-center justify-center transition-all duration-150 select-none"
-        style={{
-          background: state === 'ready' ? themeColor : state === 'tapped' ? themeColor + '25' : state === 'early' ? 'rgba(220,38,38,0.1)' : '#111827',
-          border: `2px solid ${state === 'ready' ? themeColor : state === 'tapped' ? themeColor + '50' : state === 'early' ? 'rgba(220,38,38,0.3)' : '#1F2937'}`,
-          transform: state === 'ready' ? 'scale(1.05)' : 'scale(1)',
-          boxShadow: state === 'ready' ? `0 0 40px ${themeColor}40` : 'none',
-        }}>
-        {state === 'waiting' && <span className="text-sm" style={{ color: '#6B7280' }}>wait…</span>}
-        {state === 'ready' && <span className="text-base font-bold" style={{ color: '#ffffff' }}>TAP</span>}
-        {state === 'tapped' && <><span className="text-xl font-bold" style={{ color: themeColor }}>{times[times.length - 1]}ms</span><span className="text-xs mt-1" style={{ color: '#6B7280' }}>good</span></>}
-        {state === 'early' && <span className="text-sm" style={{ color: '#FCA5A5' }}>too early</span>}
-      </button>
-      <p className="text-sm" style={{ color: '#6B7280' }}>
-        {state === 'waiting' ? 'Wait for the circle to light up' : 'Tap as fast as you can'}
-      </p>
-    </div>
-  )
 }
 
-function BaselineGame({ domain, onComplete, themeColor }: { domain: Domain; onComplete: (s: number) => void; themeColor: string }) {
+function OnboardingGame({ domain, onComplete }: { domain: Domain; onComplete: (s: number) => void }) {
   const wrap = (score: number, _metrics: unknown) => onComplete(score)
   switch (domain) {
-    case 'focus':  return <ReactionTest onComplete={onComplete} themeColor={themeColor} />
+    case 'focus':  return <FocusGame difficulty={2} duration={20} onComplete={wrap} />
     case 'memory': return <MemoryGame difficulty={2} onComplete={wrap} />
     case 'logic':  return <LogicGame difficulty={2} onComplete={wrap} />
-    default:       return <ReactionTest onComplete={onComplete} themeColor={themeColor} />
+    default:       return <FocusGame difficulty={2} duration={20} onComplete={wrap} />
   }
 }
 
@@ -130,7 +74,7 @@ export default function Onboarding() {
 
   const [screen, setScreen] = useState<Screen>('welcome')
   const [goal, setGoal] = useState<Domain | null>(null)
-  const [gameScore, setGameScore] = useState<number | null>(null)
+  const [gameScores, setGameScores] = useState<number[]>([])
   const [age, setAge] = useState('')
   const [ageGroup, setAgeGroup] = useState('')
   const [email, setEmail] = useState('')
@@ -148,7 +92,6 @@ export default function Onboarding() {
   }, [screen])
 
   const themeColor = goal ? DOMAIN_COLORS[goal].primary : '#1B4FD8'
-  const themeLight = goal ? DOMAIN_COLORS[goal].light : '#93C5FD'
 
   const ageNum = parseInt(age)
   const ageValid = !isNaN(ageNum) && ageNum >= 10 && ageNum <= 100
@@ -175,11 +118,13 @@ export default function Onboarding() {
           age: ageValid ? ageNum : null,
           age_group: ageGroup || null,
         })
-        if (gameScore !== null) {
-          await supabase.from('game_sessions').insert({ user_id: user.id, domain: goal ?? 'focus', score: gameScore, difficulty: 2 })
+        if (gameScores.length > 0) {
+          const seq = getGameSequence(goal)
+          const inserts = gameScores.map((s, i) => ({ user_id: user.id, domain: seq[i], score: s, difficulty: 2 }))
+          await supabase.from('game_sessions').insert(inserts)
         }
       }
-      navigate('/home')
+      navigate('/session', { state: { isAssessment: true } })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Authentication failed')
     } finally {
@@ -192,8 +137,6 @@ export default function Onboarding() {
     try { await signInWithGoogle() }
     catch (err: unknown) { setError(err instanceof Error ? err.message : 'Failed'); setLoading(false) }
   }
-
-  const gameMeta = GAME_META[goal ?? 'focus']
 
   // ── Screen: welcome ──────────────────────────────────────────────────────
   if (screen === 'welcome') {
@@ -328,7 +271,7 @@ export default function Onboarding() {
             {GOALS.map(({ domain, Icon, label, desc }) => {
               const dc = DOMAIN_COLORS[domain]
               return (
-                <button key={domain} onClick={() => { setGoal(domain); setScreen('game') }}
+                <button key={domain} onClick={() => { setGoal(domain); setScreen('game1') }}
                   className="flex items-center gap-4 p-4 rounded-2xl text-left transition-all"
                   style={{ background: '#111827', border: '1px solid #1F2937' }}
                   onMouseEnter={e => {
@@ -356,40 +299,31 @@ export default function Onboarding() {
     )
   }
 
-  // ── Screen: game ──────────────────────────────────────────────────────────
-  if (screen === 'game') {
+  // ── Screens: game1, game2, game3 ─────────────────────────────────────────
+  if (screen === 'game1' || screen === 'game2' || screen === 'game3') {
+    const gameIdx = screen === 'game1' ? 0 : screen === 'game2' ? 1 : 2
+    const seq = getGameSequence(goal)
+    const domain = seq[gameIdx]
+    const nextScreen: Screen = screen === 'game1' ? 'game2' : screen === 'game2' ? 'game3' : 'auth'
+
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6"
         style={{ background: `radial-gradient(ellipse 800px 400px at 50% 0%, ${themeColor}0A 0%, transparent 60%), #0A0F1E` }}>
         <div className="max-w-sm w-full flex flex-col items-center gap-8">
-          {gameScore === null ? (
-            <>
-              <div className="text-center w-full">
-                <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#6B7280' }}>Step 3 of 4 · Baseline</p>
-                <h2 className="text-xl font-bold tracking-tight">{gameMeta.title}</h2>
-                <p className="text-sm mt-1" style={{ color: '#9CA3AF' }}>{gameMeta.subtitle}</p>
-                <p className="text-xs mt-0.5" style={{ color: themeColor }}>{gameMeta.science}</p>
-              </div>
-              <BaselineGame domain={goal ?? 'focus'} onComplete={setGameScore} themeColor={themeColor} />
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-6 text-center w-full">
-              <div>
-                <p className="text-xs uppercase tracking-widest mb-3" style={{ color: themeColor }}>Your {goal} baseline</p>
-                <div className="text-7xl font-bold tracking-tight" style={{ color: themeLight }}>{Math.round(gameScore)}</div>
-                <p className="text-sm mt-1" style={{ color: '#6B7280' }}>out of 100</p>
-              </div>
-              <div className="w-full rounded-full overflow-hidden" style={{ height: 2, background: '#1F2937', maxWidth: 240 }}>
-                <div className="h-full rounded-full" style={{ width: `${gameScore}%`, background: themeColor }} />
-              </div>
-              <p className="text-sm" style={{ color: '#9CA3AF' }}>Create your account to save this and track your progress.</p>
-              <button onClick={() => setScreen('auth')}
-                className="w-full max-w-xs py-3.5 flex items-center justify-center gap-2 font-semibold rounded-xl transition-opacity hover:opacity-88"
-                style={{ background: themeColor, color: '#ffffff' }}>
-                Save my results <ArrowRightIcon size={15} />
-              </button>
-            </div>
-          )}
+          <div className="text-center w-full">
+            <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#6B7280' }}>
+              Game {gameIdx + 1} of 3
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: themeColor }}>{GAME_META[domain].science}</p>
+          </div>
+          <OnboardingGame
+            key={screen}
+            domain={domain}
+            onComplete={s => {
+              setGameScores(prev => [...prev, s])
+              setScreen(nextScreen)
+            }}
+          />
         </div>
       </div>
     )

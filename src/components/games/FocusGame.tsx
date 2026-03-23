@@ -16,6 +16,7 @@ interface Target {
 
 interface Props {
   difficulty: number
+  duration?: number
   onComplete: (score: number, metrics: GameMetrics) => void
 }
 
@@ -30,10 +31,11 @@ function getConfig(difficulty: number) {
   return { speed, decoys, spawnInterval }
 }
 
-export default function FocusGame({ difficulty, onComplete }: Props) {
+export default function FocusGame({ difficulty, duration, onComplete }: Props) {
+  const gameDuration = duration ?? DURATION
   const [targets, setTargets] = useState<Target[]>([])
   const [score, setScore] = useState({ hits: 0, misses: 0, total: 0 })
-  const [timeLeft, setTimeLeft] = useState(DURATION)
+  const [timeLeft, setTimeLeft] = useState(gameDuration)
   const [running, setRunning] = useState(false)
   const [started, setStarted] = useState(false)
   const idRef = useRef(0)
@@ -121,13 +123,13 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
       return
     }
 
-    if (timeLeft === Math.ceil(DURATION / 2)) {
+    if (timeLeft === Math.ceil(gameDuration / 2)) {
       halfScoreRef.current = { hits: score.hits, misses: score.misses }
     }
 
     const t = setTimeout(() => setTimeLeft(s => s - 1), 1000)
     return () => clearTimeout(t)
-  }, [running, timeLeft, score, onComplete, speed])
+  }, [running, timeLeft, score, onComplete, speed, gameDuration])
 
   useEffect(() => {
     if (!running) return
@@ -150,7 +152,7 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
   function start() {
     setStarted(true)
     setRunning(true)
-    setTimeLeft(DURATION)
+    setTimeLeft(gameDuration)
     setScore({ hits: 0, misses: 0, total: 0 })
     setTargets([])
     responseTimesRef.current = []
@@ -179,7 +181,7 @@ export default function FocusGame({ difficulty, onComplete }: Props) {
           <div className="absolute bottom-3 left-0 right-0 text-center text-xs" style={{ color: '#4B5563' }}>example target</div>
         </div>
         <button onClick={start} className="btn-primary px-8 py-3">
-          Start — {DURATION}s
+          Start — {gameDuration}s
         </button>
       </div>
     )
