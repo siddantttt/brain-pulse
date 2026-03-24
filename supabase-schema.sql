@@ -6,8 +6,20 @@ create table if not exists user_profiles (
   last_session_at timestamptz,
   goal text,
   onboarding_done boolean default false,
+  age int,
+  age_group text,
   created_at timestamptz default now()
 );
+
+-- Idempotent migrations: add columns if they don't exist yet
+do $$ begin
+  if not exists (select 1 from information_schema.columns where table_name='user_profiles' and column_name='age') then
+    alter table user_profiles add column age int;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name='user_profiles' and column_name='age_group') then
+    alter table user_profiles add column age_group text;
+  end if;
+end $$;
 
 create table if not exists game_sessions (
   id uuid primary key default gen_random_uuid(),

@@ -99,7 +99,7 @@ export default function LogicGame({ difficulty, onComplete }: Props) {
     if (current + 1 >= TOTAL) {
       setDone(true)
       const finalCorrect = wasCorrect ? correct + 1 : correct
-      const score = Math.round((finalCorrect / TOTAL) * 100)
+      const score = Math.max(0, Math.min(100, Math.round((finalCorrect / TOTAL) * 100)))
 
       const avgRT = responseTimesRef.current.length > 0
         ? Math.round(responseTimesRef.current.reduce((a, b) => a + b, 0) / responseTimesRef.current.length)

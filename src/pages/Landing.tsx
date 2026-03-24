@@ -78,7 +78,7 @@ export default function Landing() {
             Sign in
           </button>
         </div>
-        <p className="text-xs mt-4" style={{ color: '#4B5563' }}>No card required</p>
+        <p className="text-xs mt-4" style={{ color: '#9CA3AF' }}>No card required</p>
       </section>
 
       {/* Pulse visual */}
@@ -101,7 +101,7 @@ export default function Landing() {
       <section className="max-w-5xl mx-auto px-6 pb-24">
         <div className="mb-12">
           <h2 className="text-3xl font-bold tracking-tight mb-3">Five cognitive domains</h2>
-          <p style={{ color: '#6B7280' }}>Each one measured with a standardised assessment. Each one trainable.</p>
+          <p style={{ color: '#9CA3AF' }}>Each one measured with a standardised assessment. Each one trainable.</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {DOMAINS.map(({ Icon, name, desc, test }) => (
@@ -110,8 +110,8 @@ export default function Landing() {
                 <Icon size={18} style={{ color: '#93C5FD' }} />
               </div>
               <h3 className="font-semibold text-base mb-1.5">{name}</h3>
-              <p className="text-sm leading-relaxed mb-4" style={{ color: '#6B7280' }}>{desc}</p>
-              <span className="text-xs px-2 py-1 rounded-md" style={{ background: '#1F2937', color: '#6B7280' }}>{test}</span>
+              <p className="text-sm leading-relaxed mb-4" style={{ color: '#9CA3AF' }}>{desc}</p>
+              <span className="text-xs px-2 py-1 rounded-md" style={{ background: '#1F2937', color: '#9CA3AF' }}>{test}</span>
             </div>
           ))}
           <div className="p-6 rounded-2xl flex flex-col justify-between"
@@ -130,7 +130,7 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto px-6 py-24">
           <div className="mb-12">
             <h2 className="text-3xl font-bold tracking-tight mb-3">How it works</h2>
-            <p style={{ color: '#6B7280' }}>Simple to start. The depth shows up over time.</p>
+            <p style={{ color: '#9CA3AF' }}>Simple to start. The depth shows up over time.</p>
           </div>
           <div className="grid gap-10 sm:grid-cols-3">
             {[
@@ -139,9 +139,9 @@ export default function Landing() {
               { n: '03', title: 'Track your growth', body: 'Your brain profile updates after every session. Watch the radar chart evolve.' },
             ].map(s => (
               <div key={s.n}>
-                <div className="text-5xl font-bold mb-4" style={{ color: '#1F2937' }}>{s.n}</div>
+                <div className="text-5xl font-bold mb-4" style={{ color: '#6B7280' }}>{s.n}</div>
                 <h3 className="font-semibold mb-2">{s.title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: '#6B7280' }}>{s.body}</p>
+                <p className="text-sm leading-relaxed" style={{ color: '#9CA3AF' }}>{s.body}</p>
               </div>
             ))}
           </div>
@@ -152,13 +152,13 @@ export default function Landing() {
       <section className="max-w-5xl mx-auto px-6 py-24">
         <div className="mb-12">
           <h2 className="text-3xl font-bold tracking-tight mb-3">Built on research</h2>
-          <p style={{ color: '#6B7280' }}>Not gamification. Not dopamine tricks. Actual cognitive science.</p>
+          <p style={{ color: '#9CA3AF' }}>Not gamification. Not dopamine tricks. Actual cognitive science.</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {SCIENCE.map(s => (
             <div key={s.label} className="p-6 rounded-2xl" style={{ background: '#111827', border: '1px solid #1F2937' }}>
               <h3 className="font-semibold mb-2 text-sm" style={{ color: '#93C5FD' }}>{s.label}</h3>
-              <p className="text-sm leading-relaxed" style={{ color: '#6B7280' }}>{s.desc}</p>
+              <p className="text-sm leading-relaxed" style={{ color: '#9CA3AF' }}>{s.desc}</p>
             </div>
           ))}
         </div>
@@ -168,7 +168,7 @@ export default function Landing() {
       <section style={{ borderTop: '1px solid #1F2937' }}>
         <div className="max-w-xl mx-auto px-6 py-24 text-center">
           <h2 className="text-4xl font-bold tracking-tight mb-4">Your brain is measurable.</h2>
-          <p className="mb-8" style={{ color: '#6B7280' }}>Start with a 2-minute baseline. No account needed until you're ready.</p>
+          <p className="mb-8" style={{ color: '#9CA3AF' }}>Start with a 2-minute baseline. No account needed until you're ready.</p>
           <button onClick={() => navigate('/onboarding')}
             className="btn-primary flex items-center gap-2 px-8 py-4 text-base mx-auto">
             Start free <ArrowRightIcon size={16} />
@@ -180,10 +180,10 @@ export default function Landing() {
       <footer style={{ borderTop: '1px solid #1F2937' }}>
         <div className="max-w-5xl mx-auto px-6 py-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <PulseIcon size={14} style={{ color: '#374151' }} />
-            <span className="text-sm" style={{ color: '#374151' }}>Brain Pulse</span>
+            <PulseIcon size={14} style={{ color: '#9CA3AF' }} />
+            <span className="text-sm" style={{ color: '#9CA3AF' }}>Brain Pulse</span>
           </div>
-          <span className="text-xs" style={{ color: '#1F2937' }}>Science-backed cognitive training</span>
+          <span className="text-xs" style={{ color: '#9CA3AF' }}>Science-backed cognitive training</span>
         </div>
       </footer>
 

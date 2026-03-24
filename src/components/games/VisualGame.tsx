@@ -108,7 +108,7 @@ export default function VisualGame({ difficulty, onComplete }: Props) {
           domain: 'spatial',
         }
 
-        setTimeout(() => onComplete(Math.round(avg * 100), metrics), 900)
+        setTimeout(() => onComplete(Math.max(0, Math.min(100, Math.round(avg * 100))), metrics), 900)
       } else {
         setTimeout(() => {
           setRound(r => r + 1)

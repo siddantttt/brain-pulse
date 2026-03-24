@@ -94,8 +94,8 @@ export default function MemoryGame({ difficulty, onComplete }: Props) {
 
             if (newMatched === pairs) {
               const maxMoves = pairs * 2
-              const score = Math.max(40, Math.round(100 - ((moves + 1 - pairs) / maxMoves) * 60))
-              const clampedScore = Math.min(100, score)
+              const rawScore = Math.round(100 - ((moves + 1 - pairs) / maxMoves) * 60)
+              const clampedScore = Math.max(0, Math.min(100, rawScore))
 
               const avgRT = pairTimesRef.current.length > 0
                 ? Math.round(pairTimesRef.current.reduce((a, b) => a + b, 0) / pairTimesRef.current.length)

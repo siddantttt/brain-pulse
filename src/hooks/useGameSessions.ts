@@ -3,19 +3,36 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { GameSession, Domain } from '../types'
 
+function ageToDifficulty(age: number | null): number {
+  if (age === null) return 2
+  if (age >= 10 && age <= 14) return 1
+  if (age >= 15 && age <= 18) return 2
+  if (age >= 19 && age <= 25) return 3
+  return 2 // 26+
+}
+
 export function useGameSessions() {
   const { user } = useAuth()
   const [sessions, setSessions] = useState<GameSession[]>([])
   const [loading, setLoading] = useState(true)
+  const [userAge, setUserAge] = useState<number | null>(null)
 
   const fetchSessions = useCallback(async () => {
     if (!user) return
-    const { data } = await supabase
-      .from('game_sessions')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('played_at', { ascending: false })
-    if (data) setSessions(data as GameSession[])
+    const [{ data: sessionData }, { data: profileData }] = await Promise.all([
+      supabase
+        .from('game_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('played_at', { ascending: false }),
+      supabase
+        .from('user_profiles')
+        .select('age')
+        .eq('id', user.id)
+        .single(),
+    ])
+    if (sessionData) setSessions(sessionData as GameSession[])
+    if (profileData) setUserAge((profileData as { age: number | null }).age)
     setLoading(false)
   }, [user])
 
@@ -41,10 +58,10 @@ export function useGameSessions() {
   function computeDifficulty(domain: Domain): number {
     const last3 = getLastScoresForDomain(domain, 3)
 
-    // No history — start at 3 for new users
-    if (last3.length === 0) return 3
+    // No history — derive starting difficulty from age
+    if (last3.length === 0) return ageToDifficulty(userAge)
 
-    // Anchor to the most recent session's actual difficulty, not a hardcoded value.
+    // Anchor to the most recent session's actual difficulty.
     // This lets difficulty genuinely traverse 1–10 across sessions.
     const baseDifficulty = last3[0].difficulty
     const avg = last3.reduce((a, b) => a + b.score, 0) / last3.length

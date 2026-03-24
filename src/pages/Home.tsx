@@ -11,11 +11,12 @@ import { DOMAIN_LABELS, DOMAIN_COLORS } from '../types'
 const DOMAIN_ICONS = { focus: FocusIcon, memory: MemoryIcon, logic: LogicIcon, visual: VisualIcon, math: MathIcon, flexibility: FlexibilityIcon }
 
 function getDailyPlan(goal: Domain | null, scores: Record<Domain, number>): Domain[] {
-  const all: Domain[] = ['focus', 'memory', 'logic', 'visual', 'math']
+  const all: Domain[] = ['focus', 'memory', 'logic', 'visual', 'math', 'flexibility']
   const primary = goal ?? 'memory'
   const remaining = all.filter(d => d !== primary)
   const lowest = remaining.reduce((a, b) => scores[a] <= scores[b] ? a : b)
-  const third = remaining.filter(d => d !== lowest)[new Date().getDay() % 3] ?? 'math'
+  const others = remaining.filter(d => d !== lowest)
+  const third = others[new Date().getDay() % others.length]
   return [primary, lowest, third]
 }
 

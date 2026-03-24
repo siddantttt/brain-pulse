@@ -74,7 +74,7 @@ export default function MathGame({ difficulty, onComplete }: Props) {
     if (!started || doneRef.current) return
     if (timeLeft <= 0) {
       doneRef.current = true
-      const score = total === 0 ? 0 : Math.round((correct / total) * 100)
+      const score = total === 0 ? 0 : Math.max(0, Math.min(100, Math.round((correct / total) * 100)))
 
       const avgRT = responseTimesRef.current.length > 0
         ? Math.round(responseTimesRef.current.reduce((a, b) => a + b, 0) / responseTimesRef.current.length)
