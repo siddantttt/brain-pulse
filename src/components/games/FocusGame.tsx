@@ -1,34 +1,24 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { GameMetrics } from '../../types'
 
 /**
- * Focus Training — Blue domain (focus / stability / lower cortisol)
- * Deep blue promotes sustained attention and stability.
+ * Focus Training — Eriksen Flanker Task
  *
- * Difficulty ramps in 3 stages over the session (every 15 s):
- *   Stage 0 — opening: large dots, slow spawns, few/no decoys
- *   Stage 1 — mid:     smaller dots, faster spawns, more decoys
- *   Stage 2 — frantic: tiny dots, rapid spawns, lots of decoys
+ * Five arrows appear in a row. The player must respond to the CENTER arrow
+ * direction only, ignoring the four flanking arrows.
  *
- * Starting parameters scale with the `difficulty` prop (1–10) so that
- * age-based difficulty (from onboarding) influences the opening pace.
+ * Congruent trial  (easy): all arrows point the same way  ← ← ← ← ←
+ * Incongruent trial (hard): flankers oppose center         ← ← → ← ←
+ *
+ * This tests selective attention and inhibitory control — the same construct
+ * measured by clinical CPT and Flanker paradigms in neuropsychology research.
+ *
+ * Difficulty scales two parameters:
+ *   - responseWindow: how long the player has to respond before auto-timeout
+ *   - congruentRatio: proportion of easy (congruent) trials
+ *
+ * Higher difficulty → less time, more incongruent (interference) trials.
  */
-
-interface Target {
-  id: number
-  x: number
-  y: number
-  color: string
-  isTarget: boolean
-  size: number   // captured at spawn so mid-flight dots don't resize
-}
-
-interface StageConfig {
-  dotSize: number
-  visibility: number    // ms each dot stays on screen before auto-removing
-  spawnInterval: number // ms between wave spawns
-  decoys: number        // gray decoy dots per wave
-}
 
 interface Props {
   difficulty: number
@@ -36,335 +26,358 @@ interface Props {
   onComplete: (score: number, metrics: GameMetrics) => void
 }
 
-const TARGET_COLOR = '#1B4FD8'
-// Enough distinct gray shades for up to 8 decoys at max stage
-const DECOY_COLORS = [
-  '#6B7280', '#9CA3AF', '#4B5563', '#D1D5DB',
-  '#374151', '#CBD5E1', '#52525B', '#94A3B8',
-]
+interface Trial {
+  arrows: boolean[]              // true = right (→), false = left (←), length 5
+  answer: 'left' | 'right'       // center arrow direction
+  congruent: boolean
+}
+
 const DURATION = 45
-const STAGE_DURATION = 15   // seconds each stage lasts
-const STAGE_LABELS = ['Warming up', 'Speeding up', 'Full speed']
 
-function getStageConfig(difficulty: number, stage: number): StageConfig {
+function getConfig(difficulty: number) {
   const d = Math.max(1, Math.min(10, difficulty))
-
-  switch (stage) {
-    case 0: return {
-      // Opening — easy start, scales with difficulty so older/advanced users
-      // don't get a trivially slow warm-up
-      dotSize:       Math.max(28, 66 - d * 4),
-      visibility:    Math.max(700,  2400 - d * 200),
-      spawnInterval: Math.max(700,  2100 - d * 175),
-      decoys:        Math.max(0, Math.floor(d / 3)),
-    }
-    case 1: return {
-      // Mid ramp — meaningful escalation for all difficulties
-      dotSize:       Math.max(22, 52 - d * 2),
-      visibility:    Math.max(500,  1600 - d * 120),
-      spawnInterval: Math.max(500,  1400 - d * 100),
-      decoys:        Math.min(5, 1 + Math.floor(d / 2)),
-    }
-    default: return {
-      // Stage 2 — always frantic; difficulty shifts intensity but floor is high
-      dotSize:       Math.max(18, 30 - d),
-      visibility:    Math.max(350,  750 - d * 40),
-      spawnInterval: Math.max(350,  650 - d * 30),
-      decoys:        Math.min(8, 4 + Math.floor(d / 2)),
-    }
+  return {
+    responseWindow: Math.max(550, 2200 - d * 165),    // ms per trial
+    congruentRatio: Math.max(0.15, 0.85 - d * 0.07),  // prob of easy trial
   }
+}
+
+function makeTrial(congruentRatio: number): Trial {
+  const congruent  = Math.random() < congruentRatio
+  const centerRight = Math.random() < 0.5
+  const arrows = Array.from({ length: 5 }, (_, i) =>
+    i === 2 ? centerRight : (congruent ? centerRight : !centerRight)
+  )
+  return { arrows, answer: centerRight ? 'right' : 'left', congruent }
 }
 
 export default function FocusGame({ difficulty, duration, onComplete }: Props) {
   const gameDuration = duration ?? DURATION
+  const { responseWindow, congruentRatio } = getConfig(difficulty)
 
-  const [targets,  setTargets]  = useState<Target[]>([])
-  const [score,    setScore]    = useState({ hits: 0, misses: 0, total: 0 })
-  const [timeLeft, setTimeLeft] = useState(gameDuration)
-  const [running,  setRunning]  = useState(false)
-  const [started,  setStarted]  = useState(false)
-  const [stage,    setStage]    = useState(0)
-  const [stageFlash, setStageFlash] = useState(false)
+  // UI state
+  const [started,   setStarted]   = useState(false)
+  const [timeLeft,  setTimeLeft]  = useState(gameDuration)
+  const [trialIdx,  setTrialIdx]  = useState(0)
+  const [feedback,  setFeedback]  = useState<'correct' | 'wrong' | 'timeout' | null>(null)
+  const [correct,   setCorrect]   = useState(0)
+  const [total,     setTotal]     = useState(0)
+  const [trialPct,  setTrialPct]  = useState(100)  // response-window progress bar
 
-  const idRef           = useRef(0)
-  const stageRef        = useRef(0)   // updated sync inside timer effect; avoids adding stage to timer deps
-  const spawnTimesRef   = useRef<Record<number, number>>({})
+  // Pre-generate enough trials for any session length
+  const [trials] = useState<Trial[]>(() =>
+    Array.from({ length: 150 }, () => makeTrial(congruentRatio))
+  )
+
+  // Refs — hold live values accessible inside timers without stale-closure issues
+  const doneRef          = useRef(false)
+  const lockedRef        = useRef(false)
+  const correctRef       = useRef(0)
+  const totalRef         = useRef(0)
   const responseTimesRef = useRef<number[]>([])
-  const halfScoreRef    = useRef<{ hits: number; misses: number } | null>(null)
+  const trialStartRef    = useRef(0)
+  const halfStatsRef     = useRef<{ correct: number; total: number } | null>(null)
+  const onCompleteRef    = useRef(onComplete)
+  useEffect(() => { onCompleteRef.current = onComplete }, [onComplete])
 
-  // Derive live config from current stage state
-  const { dotSize, visibility, spawnInterval, decoys } = getStageConfig(difficulty, stage)
+  const currentTrial = trials[trialIdx % trials.length]
 
-  // ── Spawn logic ────────────────────────────────────────────────────────────
-  const removeTarget = useCallback((id: number) => {
-    setTargets(prev => prev.filter(t => t.id !== id))
-  }, [])
+  // ── End game ──────────────────────────────────────────────────────────────
+  function endGame() {
+    if (doneRef.current) return
+    doneRef.current = true
 
-  const spawnTargets = useCallback(() => {
-    const now = Date.now()
-    const wave: Target[] = []
+    const c = correctRef.current
+    const t = totalRef.current
+    const score = t === 0 ? 0 : Math.max(0, Math.min(100, Math.round((c / t) * 100)))
 
-    const blue: Target = {
-      id: idRef.current++,
-      x: 10 + Math.random() * 75,
-      y: 10 + Math.random() * 75,
-      color: TARGET_COLOR,
-      isTarget: true,
-      size: dotSize,
+    const avgRT = responseTimesRef.current.length > 0
+      ? Math.round(responseTimesRef.current.reduce((a, b) => a + b, 0) / responseTimesRef.current.length)
+      : responseWindow
+
+    let droppedUnderPressure = false
+    if (halfStatsRef.current && halfStatsRef.current.total >= 3) {
+      const half      = halfStatsRef.current
+      const firstAcc  = half.correct / half.total
+      const secTotal  = t - half.total
+      const secAcc    = secTotal > 0 ? (c - half.correct) / secTotal : 0
+      droppedUnderPressure = firstAcc - secAcc > 0.15
     }
-    spawnTimesRef.current[blue.id] = now
-    wave.push(blue)
 
-    DECOY_COLORS.slice(0, decoys).forEach(color => {
-      const decoy: Target = {
-        id: idRef.current++,
-        x: 10 + Math.random() * 75,
-        y: 10 + Math.random() * 75,
-        color,
-        isTarget: false,
-        size: dotSize,
-      }
-      spawnTimesRef.current[decoy.id] = now
-      wave.push(decoy)
-    })
+    const metrics: GameMetrics = {
+      accuracy: t === 0 ? 0 : Math.round((c / t) * 100),
+      avgResponseTime: avgRT,
+      droppedUnderPressure,
+      domain: 'attention',
+    }
 
-    setTargets(prev => [...prev, ...wave])
-    setScore(s => ({ ...s, total: s.total + 1 + decoys }))
+    onCompleteRef.current(score, metrics)
+  }
 
-    // Each dot auto-removes after `visibility` ms — timer always wins
-    wave.forEach(t => setTimeout(() => removeTarget(t.id), visibility))
-  }, [decoys, dotSize, visibility, removeTarget])
-
-  // ── Timer + stage advancement ──────────────────────────────────────────────
+  // ── Main game timer (runs on a fixed interval, independent of trial state) ─
   useEffect(() => {
-    if (!running) return
-
-    if (timeLeft <= 0) {
-      setRunning(false)
-      setTargets([])
-
-      const finalScore = score.total === 0 ? 0 :
-        Math.round((score.hits / Math.max(score.total - score.misses * 2, 1)) * 100)
-      const clampedScore = Math.min(100, Math.max(0, finalScore))
-
-      const clickAcc = (score.hits + score.misses) > 0
-        ? score.hits / (score.hits + score.misses) : 0
-      const avgRT = responseTimesRef.current.length > 0
-        ? Math.round(responseTimesRef.current.reduce((a, b) => a + b, 0) / responseTimesRef.current.length)
-        : 800
-
-      let droppedUnderPressure = false
-      if (halfScoreRef.current) {
-        const half = halfScoreRef.current
-        const firstHalfTotal  = half.hits + half.misses
-        const firstHalfAcc    = firstHalfTotal > 0 ? half.hits / firstHalfTotal : 0
-        const secondHalfHits  = score.hits   - half.hits
-        const secondHalfMisses = score.misses - half.misses
-        const secondHalfTotal = secondHalfHits + secondHalfMisses
-        const secondHalfAcc   = secondHalfTotal > 0 ? secondHalfHits / secondHalfTotal : 0
-        droppedUnderPressure  = firstHalfTotal > 2 && (firstHalfAcc - secondHalfAcc) > 0.15
-      }
-
-      const metrics: GameMetrics = {
-        accuracy: Math.round(clickAcc * 100),
-        avgResponseTime: avgRT,
-        droppedUnderPressure,
-        domain: 'attention',
-      }
-
-      onComplete(clampedScore, metrics)
-      return
-    }
-
-    // Advance stage every STAGE_DURATION seconds
-    // Use a ref to avoid adding `stage` to deps (which would cause the timer
-    // to reset its setTimeout each time stage changes)
-    const elapsed    = gameDuration - timeLeft
-    const nextStage  = Math.min(2, Math.floor(elapsed / STAGE_DURATION))
-    if (nextStage !== stageRef.current) {
-      stageRef.current = nextStage
-      setStage(nextStage)
-      setStageFlash(true)
-      setTimeout(() => setStageFlash(false), 800)
-    }
-
-    if (timeLeft === Math.ceil(gameDuration / 2)) {
-      halfScoreRef.current = { hits: score.hits, misses: score.misses }
-    }
-
-    const t = setTimeout(() => setTimeLeft(s => s - 1), 1000)
-    return () => clearTimeout(t)
-  }, [running, timeLeft, score, onComplete, gameDuration])
-
-  // ── Spawn interval — restarts whenever stage changes (new config) ──────────
-  useEffect(() => {
-    if (!running) return
-    const id = setInterval(spawnTargets, spawnInterval)
+    if (!started) return
+    const id = setInterval(() => {
+      setTimeLeft(prev => {
+        const next = prev - 1
+        if (next === Math.ceil(gameDuration / 2) && !halfStatsRef.current) {
+          halfStatsRef.current = { correct: correctRef.current, total: totalRef.current }
+        }
+        if (next <= 0) {
+          clearInterval(id)
+          setTimeout(endGame, 400)
+        }
+        return Math.max(0, next)
+      })
+    }, 1000)
     return () => clearInterval(id)
-  }, [running, spawnTargets, spawnInterval])
+  }, [started])   // intentionally no other deps — reads only from refs
 
-  // ── Click handler ──────────────────────────────────────────────────────────
-  function handleClick(target: Target) {
-    if (!running) return
-    removeTarget(target.id)
-    if (target.isTarget) {
-      const rt = Date.now() - (spawnTimesRef.current[target.id] ?? Date.now())
-      responseTimesRef.current.push(rt)
-      setScore(s => ({ ...s, hits: s.hits + 1 }))
-    } else {
-      setScore(s => ({ ...s, misses: s.misses + 1 }))
+  // ── Per-trial: response window countdown + auto-timeout ───────────────────
+  useEffect(() => {
+    if (!started || feedback !== null || doneRef.current) return
+
+    trialStartRef.current = Date.now()
+    setTrialPct(100)
+
+    // Smooth progress bar draining over responseWindow ms
+    const TICK = 40
+    const progressId = setInterval(() => {
+      const elapsed = Date.now() - trialStartRef.current
+      setTrialPct(Math.max(0, 100 - (elapsed / responseWindow) * 100))
+    }, TICK)
+
+    // Auto-timeout when window expires
+    const timeoutId = setTimeout(() => {
+      clearInterval(progressId)
+      if (doneRef.current || lockedRef.current) return
+      lockedRef.current = true
+      totalRef.current += 1
+      setTotal(t => t + 1)
+      setFeedback('timeout')
+      setTimeout(() => {
+        lockedRef.current = false
+        setFeedback(null)
+        setTrialIdx(i => i + 1)
+      }, 380)
+    }, responseWindow)
+
+    return () => {
+      clearInterval(progressId)
+      clearTimeout(timeoutId)
     }
+  }, [started, trialIdx, feedback])   // re-runs for each new trial
+
+  // ── Player response ───────────────────────────────────────────────────────
+  function handleResponse(dir: 'left' | 'right') {
+    if (!started || lockedRef.current || doneRef.current || feedback !== null) return
+    lockedRef.current = true
+
+    const rt        = Date.now() - trialStartRef.current
+    const isCorrect = dir === currentTrial.answer
+
+    if (isCorrect) {
+      correctRef.current += 1
+      setCorrect(c => c + 1)
+      responseTimesRef.current.push(rt)
+    }
+    totalRef.current += 1
+    setTotal(t => t + 1)
+    setFeedback(isCorrect ? 'correct' : 'wrong')
+
+    setTimeout(() => {
+      lockedRef.current = false
+      setFeedback(null)
+      setTrialIdx(i => i + 1)
+    }, 380)
   }
 
-  // ── Start ──────────────────────────────────────────────────────────────────
+  // ── Keyboard support ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!started) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'ArrowLeft')  handleResponse('left')
+      if (e.key === 'ArrowRight') handleResponse('right')
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [started, feedback, trialIdx])
+
+  // ── Start ─────────────────────────────────────────────────────────────────
   function start() {
-    idRef.current = 0
-    stageRef.current = 0
+    doneRef.current          = false
+    lockedRef.current        = false
+    correctRef.current       = 0
+    totalRef.current         = 0
     responseTimesRef.current = []
-    halfScoreRef.current = null
-    setTargets([])
-    setScore({ hits: 0, misses: 0, total: 0 })
+    halfStatsRef.current     = null
+    setCorrect(0)
+    setTotal(0)
     setTimeLeft(gameDuration)
-    setStage(0)
-    setStageFlash(false)
+    setTrialIdx(0)
+    setFeedback(null)
+    setTrialPct(100)
     setStarted(true)
-    setRunning(true)
   }
 
-  // ── Intro screen ───────────────────────────────────────────────────────────
+  const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0
+
+  // ── Intro screen ──────────────────────────────────────────────────────────
   if (!started) {
     return (
       <div className="flex flex-col items-center gap-6 text-center">
         <div>
           <p className="text-sm mb-4 max-w-xs leading-relaxed" style={{ color: '#9CA3AF' }}>
-            This one tests how well you tune out distractions and lock onto what matters.
+            This tests your ability to focus on what matters and block out what doesn't.
           </p>
-          <h2 className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>Focus Training</h2>
+          <h2 className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>Flanker Task</h2>
           <p className="mt-2 text-sm" style={{ color: '#9CA3AF' }}>
-            Click the <span style={{ color: '#93C5FD', fontWeight: 600 }}>blue</span> targets only.
-            <br />Ignore everything else. It gets harder fast.
+            Five arrows appear. Tap the direction the{' '}
+            <span style={{ color: '#93C5FD', fontWeight: 600 }}>centre arrow</span>{' '}
+            is pointing.<br />Ignore the four arrows around it.
           </p>
         </div>
-        <div className="relative rounded-2xl" style={{ width: 320, height: 200, background: '#0A0F1E', border: '1px solid #1F2937' }}>
-          <div className="absolute rounded-full" style={{
-            width: 52, height: 52, left: '35%', top: '50%',
-            transform: 'translate(-50%, -50%)',
-            background: TARGET_COLOR,
-            boxShadow: '0 0 20px rgba(27,79,216,0.4)',
-          }} />
-          <div className="absolute rounded-full" style={{
-            width: 40, height: 40, left: '65%', top: '40%',
-            transform: 'translate(-50%, -50%)',
-            background: '#6B7280',
-          }} />
-          <div className="absolute bottom-3 left-0 right-0 text-center text-xs" style={{ color: '#4B5563' }}>
-            blue = tap · grey = ignore
-          </div>
-        </div>
-        {/* Difficulty ramp preview */}
-        <div className="flex items-center gap-2 text-xs" style={{ color: '#4B5563' }}>
-          {[0, 1, 2].map(s => {
-            const cfg = getStageConfig(difficulty, s)
-            return (
-              <div key={s} className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl"
-                style={{ background: '#111827', border: '1px solid #1F2937' }}>
-                <div className="rounded-full" style={{
-                  width: cfg.dotSize * 0.6, height: cfg.dotSize * 0.6,
-                  background: TARGET_COLOR,
-                  opacity: 0.7 + s * 0.1,
-                }} />
-                <span style={{ color: s === 2 ? '#FCA5A5' : '#4B5563' }}>
-                  {STAGE_LABELS[s]}
-                </span>
+
+        {/* Example: congruent vs incongruent */}
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          {[
+            { arrows: [false, false, false, false, false], label: 'Easy — all agree', labelColor: '#86EFAC' },
+            { arrows: [true,  true,  false, true,  true ], label: 'Hard — flankers disagree', labelColor: '#FCA5A5' },
+          ].map((ex, ei) => (
+            <div key={ei} className="p-4 rounded-2xl flex flex-col items-center gap-2"
+              style={{ background: '#111827', border: '1px solid #1F2937' }}>
+              <div className="flex gap-3">
+                {ex.arrows.map((right, i) => (
+                  <span key={i}
+                    className="text-2xl font-bold select-none"
+                    style={{ color: i === 2 ? '#93C5FD' : '#4B5563' }}>
+                    {right ? '→' : '←'}
+                  </span>
+                ))}
               </div>
-            )
-          })}
+              <span className="text-xs" style={{ color: ex.labelColor }}>{ex.label}</span>
+            </div>
+          ))}
         </div>
+
         <button onClick={start} className="btn-primary px-8 py-3">
           Start — {gameDuration}s
         </button>
+        <p className="text-xs" style={{ color: '#374151' }}>
+          Eriksen Flanker Task · inhibitory control · selective attention
+        </p>
       </div>
     )
   }
 
-  // ── Game screen ────────────────────────────────────────────────────────────
-  const accuracy = score.total > 0 ? Math.round((score.hits / score.total) * 100) : 0
-  const stageColors = ['#1B4FD8', '#7C3AED', '#DC2626']
-  const stageColor  = stageColors[stage]
+  // ── Game screen ───────────────────────────────────────────────────────────
+  const arenaColor = feedback === 'correct' ? 'rgba(22,163,74,0.1)'
+    : feedback === 'wrong'   ? 'rgba(220,38,38,0.1)'
+    : feedback === 'timeout' ? 'rgba(107,114,128,0.07)'
+    : '#111827'
+
+  const arenaBorder = feedback === 'correct' ? '#16A34A'
+    : feedback === 'wrong'   ? '#DC2626'
+    : feedback === 'timeout' ? '#374151'
+    : '#1F2937'
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-5 w-full max-w-sm mx-auto">
 
       {/* HUD */}
-      <div className="flex items-center justify-between w-full max-w-sm">
+      <div className="flex items-center justify-between w-full">
         <div className="text-center">
           <div className="text-2xl font-bold" style={{ color: '#F9FAFB' }}>{timeLeft}s</div>
           <div className="text-xs" style={{ color: '#6B7280' }}>time left</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold" style={{ color: '#93C5FD' }}>{score.hits}</div>
-          <div className="text-xs" style={{ color: '#6B7280' }}>hits</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold" style={{ color: '#FCA5A5' }}>{score.misses}</div>
-          <div className="text-xs" style={{ color: '#6B7280' }}>misses</div>
+          <div className="text-2xl font-bold" style={{ color: '#93C5FD' }}>{correct}</div>
+          <div className="text-xs" style={{ color: '#6B7280' }}>correct</div>
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold" style={{ color: '#86EFAC' }}>{accuracy}%</div>
           <div className="text-xs" style={{ color: '#6B7280' }}>accuracy</div>
         </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold" style={{ color: '#9CA3AF' }}>{total}</div>
+          <div className="text-xs" style={{ color: '#6B7280' }}>trials</div>
+        </div>
       </div>
 
-      {/* Stage indicator */}
-      <div className="flex items-center gap-1.5 w-full max-w-sm">
-        {[0, 1, 2].map(s => (
-          <div key={s} className="flex-1 h-1 rounded-full transition-all duration-500"
-            style={{ background: s <= stage ? stageColor : '#1F2937' }} />
-        ))}
-        <span className="text-xs ml-1 transition-all duration-300"
+      {/* Response-window bar */}
+      <div className="w-full h-1 rounded-full" style={{ background: '#1F2937' }}>
+        <div className="h-1 rounded-full transition-none"
           style={{
-            color: stageFlash ? stageColor : '#4B5563',
-            fontWeight: stageFlash ? 600 : 400,
-          }}>
-          {STAGE_LABELS[stage]}
-        </span>
+            width: `${trialPct}%`,
+            background: trialPct > 50 ? '#1B4FD8' : trialPct > 25 ? '#7C3AED' : '#DC2626',
+          }} />
       </div>
 
-      {/* Arena */}
-      <div className="relative rounded-2xl overflow-hidden"
+      {/* Arrow display */}
+      <div className="w-full rounded-2xl flex flex-col items-center justify-center transition-colors duration-150"
         style={{
-          width: 340, height: 300,
-          background: '#0A0F1E',
-          border: `1px solid ${stageFlash ? stageColor + '80' : '#1F2937'}`,
-          transition: 'border-color 0.4s ease',
+          height: 160,
+          background: arenaColor,
+          border: `1px solid ${arenaBorder}`,
         }}>
-        {targets.map(target => (
-          <button
-            key={target.id}
-            onClick={() => handleClick(target)}
-            className="absolute rounded-full"
+        {feedback ? (
+          <span className="text-lg font-semibold"
             style={{
-              width:  target.size,
-              height: target.size,
-              left:   `${target.x}%`,
-              top:    `${target.y}%`,
-              transform: 'translate(-50%, -50%)',
-              backgroundColor: target.color,
-              boxShadow: target.isTarget ? `0 0 ${Math.round(target.size * 0.35)}px rgba(27,79,216,0.55)` : 'none',
-              border: target.isTarget
-                ? '2px solid rgba(147,197,253,0.45)'
-                : '1px solid rgba(255,255,255,0.06)',
-              transition: 'transform 80ms ease',
-            }}
-          />
-        ))}
-        {targets.length === 0 && running && (
-          <div className="absolute inset-0 flex items-center justify-center text-sm"
-            style={{ color: '#374151' }}>
-            Get ready…
+              color: feedback === 'correct' ? '#86EFAC'
+                   : feedback === 'wrong'   ? '#FCA5A5'
+                   : '#6B7280',
+            }}>
+            {feedback === 'correct' ? '✓ Correct'
+           : feedback === 'wrong'   ? '✗ Wrong'
+           : 'Too slow'}
+          </span>
+        ) : (
+          <div className="flex items-center gap-4">
+            {currentTrial.arrows.map((right, i) => (
+              <span key={i}
+                className="font-bold select-none"
+                style={{
+                  fontSize:   i === 2 ? 52 : 40,
+                  color:      i === 2 ? '#F9FAFB' : '#4B5563',
+                  lineHeight: 1,
+                }}>
+                {right ? '→' : '←'}
+              </span>
+            ))}
           </div>
         )}
       </div>
+
+      {/* Response buttons */}
+      <div className="flex gap-3 w-full">
+        {(['left', 'right'] as const).map(dir => (
+          <button
+            key={dir}
+            onClick={() => handleResponse(dir)}
+            disabled={!!feedback}
+            className="flex-1 rounded-2xl flex items-center justify-center font-bold transition-colors"
+            style={{
+              height: 80,
+              fontSize: 36,
+              background: feedback ? 'rgba(255,255,255,0.02)' : 'rgba(27,79,216,0.08)',
+              border: `1px solid ${feedback ? '#1F2937' : 'rgba(27,79,216,0.35)'}`,
+              color: feedback ? '#374151' : '#93C5FD',
+              cursor: feedback ? 'default' : 'pointer',
+            }}
+            onMouseEnter={e => {
+              if (!feedback) e.currentTarget.style.background = 'rgba(27,79,216,0.16)'
+            }}
+            onMouseLeave={e => {
+              if (!feedback) e.currentTarget.style.background = 'rgba(27,79,216,0.08)'
+            }}>
+            {dir === 'left' ? '←' : '→'}
+          </button>
+        ))}
+      </div>
+
+      <p className="text-xs text-center" style={{ color: '#374151' }}>
+        Keyboard: ← → arrow keys also work
+      </p>
     </div>
   )
 }
