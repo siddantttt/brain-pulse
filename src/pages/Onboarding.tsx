@@ -3,18 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import FocusGame from '../components/games/FocusGame'
-import MemoryGame from '../components/games/MemoryGame'
+import MathGame from '../components/games/MathGame'
 import LogicGame from '../components/games/LogicGame'
-import { PulseIcon, FocusIcon, MemoryIcon, LogicIcon, ArrowRightIcon } from '../components/Icons'
+import { PulseIcon, FocusIcon, MathIcon, LogicIcon, ArrowRightIcon } from '../components/Icons'
 import type { Domain } from '../types'
 import { DOMAIN_COLORS } from '../types'
 
 type Screen = 'welcome' | 'age' | 'goal' | 'game1' | 'game2' | 'game3' | 'auth'
 
 const GOALS = [
-  { domain: 'focus' as Domain,  Icon: FocusIcon,  label: 'Sharper Focus',    desc: 'Improve concentration & attention span' },
-  { domain: 'memory' as Domain, Icon: MemoryIcon, label: 'Better Memory',     desc: 'Retain more, recall faster' },
-  { domain: 'logic' as Domain,  Icon: LogicIcon,  label: 'Overall Sharpness', desc: 'Boost all-round mental performance' },
+  { domain: 'focus' as Domain,  Icon: FocusIcon, label: 'Sharper Focus',    desc: 'Improve concentration & attention span' },
+  { domain: 'math'  as Domain,  Icon: MathIcon,  label: 'Mental Speed',     desc: 'Process information faster under pressure' },
+  { domain: 'logic' as Domain,  Icon: LogicIcon, label: 'Overall Sharpness', desc: 'Boost all-round mental performance' },
 ]
 
 const GAME_META: Record<Domain, { title: string; subtitle: string; science: string }> = {
@@ -46,20 +46,20 @@ function ageGroupKey(n: number): string {
 
 function getGameSequence(g: Domain | null): [Domain, Domain, Domain] {
   switch (g) {
-    case 'focus':  return ['focus', 'memory', 'logic']
-    case 'memory': return ['memory', 'focus', 'logic']
-    case 'logic':  return ['logic', 'memory', 'focus']
-    default:       return ['focus', 'memory', 'logic']
+    case 'focus': return ['focus', 'math', 'logic']
+    case 'math':  return ['math',  'focus', 'logic']
+    case 'logic': return ['logic', 'focus', 'math']
+    default:      return ['focus', 'math', 'logic']
   }
 }
 
 function OnboardingGame({ domain, onComplete }: { domain: Domain; onComplete: (s: number) => void }) {
   const wrap = (score: number, _metrics: unknown) => onComplete(score)
   switch (domain) {
-    case 'focus':  return <FocusGame difficulty={2} duration={20} onComplete={wrap} />
-    case 'memory': return <MemoryGame difficulty={2} onComplete={wrap} />
-    case 'logic':  return <LogicGame difficulty={2} onComplete={wrap} />
-    default:       return <FocusGame difficulty={2} duration={20} onComplete={wrap} />
+    case 'focus': return <FocusGame difficulty={2} duration={20} onComplete={wrap} />
+    case 'math':  return <MathGame  difficulty={2} onComplete={wrap} />
+    case 'logic': return <LogicGame difficulty={2} onComplete={wrap} />
+    default:      return <FocusGame difficulty={2} duration={20} onComplete={wrap} />
   }
 }
 
@@ -77,6 +77,7 @@ export default function Onboarding() {
   const [gameScores, setGameScores] = useState<number[]>([])
   const [age, setAge] = useState('')
   const [ageGroup, setAgeGroup] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(true)
@@ -113,10 +114,11 @@ export default function Onboarding() {
       if (user) {
         await supabase.from('user_profiles').upsert({
           id: user.id,
-          goal: goal ?? 'memory',
+          goal: goal ?? 'focus',
           onboarding_done: true,
           age: ageValid ? ageNum : null,
           age_group: ageGroup || null,
+          display_name: displayName.trim() || null,
         })
         if (gameScores.length > 0) {
           const seq = getGameSequence(goal)
@@ -342,6 +344,16 @@ export default function Onboarding() {
         <p className="text-sm mb-8" style={{ color: '#9CA3AF' }}>Your baseline score will be saved automatically.</p>
 
         <form onSubmit={handleAuth} className="flex flex-col gap-3">
+          {isSignUp && (
+            <input
+              type="text"
+              placeholder="Your first name"
+              value={displayName}
+              onChange={e => setDisplayName(e.target.value)}
+              style={inputStyle}
+              autoComplete="given-name"
+            />
+          )}
           <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} required />
           <input type="password" placeholder="Password (min 6 characters)" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} required minLength={6} />
           {error && <p className="text-sm text-center" style={{ color: '#FCA5A5' }}>{error}</p>}

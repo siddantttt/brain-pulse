@@ -11,13 +11,30 @@ import { DOMAIN_LABELS, DOMAIN_COLORS } from '../types'
 const DOMAIN_ICONS = { focus: FocusIcon, memory: MemoryIcon, logic: LogicIcon, visual: VisualIcon, math: MathIcon, flexibility: FlexibilityIcon }
 
 function getDailyPlan(goal: Domain | null, scores: Record<Domain, number>): Domain[] {
-  const all: Domain[] = ['focus', 'memory', 'logic', 'visual', 'math', 'flexibility']
-  const primary = goal ?? 'memory'
+  const all: Domain[] = ['focus', 'logic', 'visual', 'math', 'flexibility']
+  const primary = goal ?? 'focus'
   const remaining = all.filter(d => d !== primary)
   const lowest = remaining.reduce((a, b) => scores[a] <= scores[b] ? a : b)
   const others = remaining.filter(d => d !== lowest)
   const third = others[new Date().getDay() % others.length]
   return [primary, lowest, third]
+}
+
+function getGreeting(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
+function InitialsAvatar({ name }: { name: string }) {
+  const initials = name.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  return (
+    <div className="flex items-center justify-center rounded-full text-xs font-bold shrink-0"
+      style={{ width: 28, height: 28, background: '#1B4FD8', color: '#F9FAFB' }}>
+      {initials}
+    </div>
+  )
 }
 
 export default function Home() {
@@ -31,20 +48,40 @@ export default function Home() {
     ? new Date(profile.last_session_at).toDateString() === new Date().toDateString()
     : false
 
+  const name = profile?.display_name ?? null
+
   return (
     <div className="min-h-screen max-w-lg mx-auto px-4 py-8">
 
       {/* Nav */}
-      <div className="flex items-center justify-between mb-10">
+      <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-2">
           <PulseIcon size={15} style={{ color: '#1B4FD8' }} />
           <span className="font-semibold tracking-tight text-sm">Brain Pulse</span>
         </div>
-        <button onClick={signOut} className="text-xs transition-colors" style={{ color: '#4B5563' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#9CA3AF')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#4B5563')}>
-          Sign out
-        </button>
+        <div className="flex items-center gap-2.5">
+          {name && <InitialsAvatar name={name} />}
+          {name && (
+            <span className="text-sm font-medium" style={{ color: '#F9FAFB' }}>{name}</span>
+          )}
+          <span style={{ color: '#1F2937' }}>·</span>
+          <button onClick={signOut} className="text-xs transition-colors" style={{ color: '#4B5563' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#9CA3AF')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#4B5563')}>
+            Sign out
+          </button>
+        </div>
+      </div>
+
+      {/* Greeting */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#F9FAFB' }}>
+          {getGreeting()}{name ? `, ${name}` : ''}.
+        </h1>
+        {hasPlayedToday
+          ? <p className="text-sm mt-1" style={{ color: '#6B7280' }}>You've trained today. Come back tomorrow, or go again.</p>
+          : <p className="text-sm mt-1" style={{ color: '#6B7280' }}>Ready for today's session?</p>
+        }
       </div>
 
       {/* Streak */}

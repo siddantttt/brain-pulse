@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useGameSessions } from '../hooks/useGameSessions'
+import { useAuth } from '../contexts/AuthContext'
 import MemoryGame from '../components/games/MemoryGame'
 import FocusGame from '../components/games/FocusGame'
 import LogicGame from '../components/games/LogicGame'
@@ -32,14 +33,13 @@ const DOMAIN_SCIENCE: Record<Domain, string> = {
 
 // Narrative messages shown after each game in assessment mode
 const TRANSITION_MESSAGES: Record<number, string> = {
-  0: "Sharp. Let's see how much you can hold.",
-  1: "Impressive. Now let's see how fast you shift.",
-  2: "Adaptive. Let's test your speed.",
-  3: "Fast mind. Let's see how you read patterns.",
-  4: "Good eye. One last challenge.",
+  0: "Sharp. Now let's test your mental agility.",
+  1: "Adaptive. Let's test your speed.",
+  2: "Fast mind. Let's see how you read patterns.",
+  3: "Good eye. One last challenge.",
 }
 
-const ASSESSMENT_PLAN: Domain[] = ['focus', 'memory', 'flexibility', 'math', 'logic', 'visual']
+const ASSESSMENT_PLAN: Domain[] = ['focus', 'flexibility', 'math', 'logic', 'visual']
 
 function GameComponent({
   domain, difficulty, onComplete,
@@ -62,6 +62,8 @@ export default function Session() {
   const navigate = useNavigate()
   const location = useLocation()
   const { saveSession, computeDifficulty, getLastScore } = useGameSessions()
+  const { profile } = useAuth()
+  const ageGroup = profile?.age_group ?? null
 
   const isAssessment: boolean = location.state?.isAssessment ?? false
   const plan: Domain[] = isAssessment
@@ -71,6 +73,7 @@ export default function Session() {
   const [gameIdx, setGameIdx] = useState(0)
   const [phase, setPhase] = useState<'playing' | 'score' | 'transition'>('playing')
   const [currentScore, setCurrentScore] = useState(0)
+  const [currentMetrics, setCurrentMetrics] = useState<GameMetrics | null>(null)
   const [transitionMsg, setTransitionMsg] = useState('')
   const [results, setResults] = useState<Array<{ domain: Domain; score: number; difficulty: number }>>([])
 
@@ -79,8 +82,9 @@ export default function Session() {
   const Icon = DOMAIN_ICONS[domain]
   const dc = DOMAIN_COLORS[domain]
 
-  async function handleGameComplete(score: number, _metrics: GameMetrics) {
+  async function handleGameComplete(score: number, metrics: GameMetrics) {
     setCurrentScore(score)
+    setCurrentMetrics(metrics)
     await saveSession(domain, score, difficulty)
     const newResults = [...results, { domain, score, difficulty }]
     setResults(newResults)
@@ -213,6 +217,8 @@ export default function Session() {
             domain={domain}
             score={currentScore}
             lastScore={getLastScore(domain)}
+            metrics={currentMetrics ?? undefined}
+            ageGroup={ageGroup}
             isLast={gameIdx + 1 >= plan.length}
             onNext={handleNext}
           />
