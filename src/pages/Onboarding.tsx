@@ -70,7 +70,7 @@ const inputStyle = {
 
 export default function Onboarding() {
   const navigate = useNavigate()
-  const { signIn, signUp, signInWithGoogle } = useAuth()
+  const { signIn, signUp, signInWithGoogle, refreshProfile } = useAuth()
 
   const [screen, setScreen] = useState<Screen>('welcome')
   const [goal, setGoal] = useState<Domain | null>(null)
@@ -125,6 +125,7 @@ export default function Onboarding() {
           const inserts = gameScores.map((s, i) => ({ user_id: user.id, domain: seq[i], score: s, difficulty: 2 }))
           await supabase.from('game_sessions').insert(inserts)
         }
+        await refreshProfile()
       }
       navigate('/session', { state: { isAssessment: true } })
     } catch (err: unknown) {
