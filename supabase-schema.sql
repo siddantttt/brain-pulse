@@ -19,6 +19,9 @@ do $$ begin
   if not exists (select 1 from information_schema.columns where table_name='user_profiles' and column_name='age_group') then
     alter table user_profiles add column age_group text;
   end if;
+  if not exists (select 1 from information_schema.columns where table_name='user_profiles' and column_name='display_name') then
+    alter table user_profiles add column display_name text;
+  end if;
 end $$;
 
 create table if not exists game_sessions (

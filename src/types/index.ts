@@ -6,6 +6,9 @@ export interface UserProfile {
   last_session_at: string | null
   goal: Domain | null
   onboarding_done: boolean
+  display_name: string | null
+  age: number | null
+  age_group: string | null
   created_at: string
 }
 

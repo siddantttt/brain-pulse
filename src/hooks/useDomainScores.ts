@@ -8,7 +8,7 @@ export function useDomainScores(): { scores: DomainScores; loading: boolean } {
   const { sessions, loading } = useGameSessions()
 
   const scores = useMemo<DomainScores>(() => {
-    const result = { focus: 50, memory: 50, logic: 50, visual: 50, math: 50, flexibility: 50 }
+    const result = { focus: 0, memory: 0, logic: 0, visual: 0, math: 0, flexibility: 0 }
 
     for (const domain of DOMAINS) {
       const domainSessions = sessions.filter(s => s.domain === domain)
