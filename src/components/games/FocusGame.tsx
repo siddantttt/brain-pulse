@@ -32,7 +32,7 @@ interface Trial {
   congruent: boolean
 }
 
-const DURATION = 45
+const DURATION = 25
 
 function getConfig(difficulty: number) {
   const d = Math.max(1, Math.min(10, difficulty))

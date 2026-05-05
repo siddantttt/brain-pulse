@@ -58,8 +58,8 @@ function generateQuestion(difficulty: number): Question {
   return { sequence, answer, options }
 }
 
-const TOTAL = 8
-const TIME_PER_Q = 10
+const TOTAL = 5
+const TIME_PER_Q = 6
 
 export default function LogicGame({ difficulty, onComplete }: Props) {
   const [started, setStarted] = useState(false)

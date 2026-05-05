@@ -72,7 +72,7 @@ function ShapeIcon({ shape, color, size = 72 }: { shape: Shape; color: string; s
   }
 }
 
-const TOTAL_CARDS = 16
+const TOTAL_CARDS = 10
 
 export default function RuleShiftGame({ difficulty, onComplete }: Props) {
   const { timePerCard, shiftAt } = getConfig(difficulty)

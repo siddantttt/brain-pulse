@@ -21,7 +21,7 @@ interface Problem {
 }
 
 function getConfig(difficulty: number) {
-  const duration = 45
+  const duration = 25
   const maxNum = difficulty <= 3 ? 12 : difficulty <= 6 ? 25 : 50
   const useMultiply = difficulty >= 4
   return { duration, maxNum, useMultiply }

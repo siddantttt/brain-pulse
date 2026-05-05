@@ -27,7 +27,7 @@ function randomSequence(length: number): number[] {
   return seq
 }
 
-const ROUNDS = 5
+const ROUNDS = 3
 const FLASH_MS = 600
 const GAP_MS = 250
 
